@@ -1,0 +1,11 @@
+seamingPair(91,2291),seamingPair(89,2292),seamingPair(542,354),
+		seamingPair(536,353),seamingPair(538,2298),seamingPair(535,2299),seamingPair(533,350),
+		seamingPair(532,349),seamingPair(530,2557),	//左侧
+
+		seamingPair(510,345),seamingPair(508,2338),seamingPair(2298,2339),
+		seamingPair(2296,2332),seamingPair(2295,2333),seamingPair(2441,2345),seamingPair(2440,2342),
+		seamingPair(2445,2563),seamingPair(512,342),seamingPair(511,2284),//左侧
+
+
+
+		00-50-56-C0-00-08

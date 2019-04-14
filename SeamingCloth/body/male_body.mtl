@@ -1,0 +1,13 @@
+# File produced by DGene
+# Start of mtl file
+newmtl lambert3
+Ka 1 1 1
+Kd 0 0 0
+Ks 0.4000000059604645 0.4000000059604645 0.4000000059604645
+Ke 0 0 0
+Tf 0 0 0
+d 1
+Ni 1
+Ns 10
+illum 2
+map_Kd ./male_body.jpeg
