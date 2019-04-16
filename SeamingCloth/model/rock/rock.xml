@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<scene version="0.5.0">
+	<!-- 积分器 -->
+	<integrator type="path">
+		<integer name = "maxDepth" value="8"/>
+	</integrator>
+
+	<!--Camera-->
+	 <sensor type="perspective">
+		<transform name="toWorld">
+			<lookat origin="0, 5, 10" target="0, 0, 0" up="0, 1, 0"/>
+		</transform>
+		<float name="fov" value="45"/>
+		<sampler type="independent">
+			<integer name="sampleCount" value="128"/>
+		</sampler>
+		<film type="hdrfilm">
+			<integer name="width" value="1024"/>
+			<integer name="height" value="768"/>
+		</film>
+	</sensor>
+
+	<!--Obj-->
+	<shape type="obj">
+		<string name="filename" value="rock.obj"/>
+		<bsdf type="diffuse">
+			<texture type="bitmap" name="reflectance">
+				<string name="filename" value="testTexture.png"/>
+			</texture>
+		</bsdf>
+	</shape>
+
+	<!--Light-->
+	<emitter type="spot">
+		<spectrum name="intensity" value="100"/>
+		<transform name="toWorld">
+			<lookat origin="0,10,10" target="0,0,0"/>
+		</transform>
+	</emitter>
+</scene>

@@ -5,6 +5,8 @@
 #include"BBox.h"
 #include"UniformBVH.h"
 
+#include"BVH.h"
+
 #include<iostream>
 #include<cassert>
 
@@ -42,7 +44,7 @@ std::string bodyVertexShaderPath = "./shader/bodyVertexShader.vs";
 std::string bodyGeometryShaderPath = "./shader/bodyGeometryShader.gs";
 std::string bodyFragmentShaderPath = "./shader/bodyFragmentShader.fs";
 
-std::string bodyPath = "./body/male_body.obj";
+std::string bodyPath = "./model/rock/rock.obj";
 
 gph::Camera<float> camera;
 
@@ -121,14 +123,18 @@ int main()
 
 	gph::ModelPointer<float> body = std::make_shared<gph::Model<float>>();
 	body->LoadModel(bodyPath);
-	Lyra::uniformBvh_up<float> bvh = std::make_unique<Lyra::UniformBVH<float>>();
+
+	///////////////////////////////BVH Build////////////////////////////////////////////////////
+	Lyra::objectBvh_up<float> objBVH= std::make_unique<Lyra::ObjectBVH<float>>();
+	objBVH->Build(body, bvhShader, true);
+	/*Lyra::uniformBvh_up<float> bvh = std::make_unique<Lyra::UniformBVH<float>>();
 
 	Lyra::vec3<float> center(0.f, -65.f, 5.f);
 	Lyra::vec3<float> halfExtend(32.f, 90.f, 25.f);
 	Lyra::vec3<float> cellSize(10, 10, 10);
 
 	bvh->SetExternalBBox(center, halfExtend, bvhShader, drawSubBBox);
-	bvh->BuildBBoxVH(body, cellSize, bvhShader);
+	bvh->BuildBBoxVH(body, cellSize, bvhShader);*/
 	
 	///////////////////////////////cloth setting///////////////////////////////////////////////////
 
@@ -431,6 +437,8 @@ int main()
 
 	body->GlBind();
 
+	objBVH->GlBind();
+
 	camera.Init(setting, modelMat);
 
 	glEnable(GL_DEPTH_TEST);
@@ -446,16 +454,17 @@ int main()
 		projectionMat = camera.GetProjectMatrix();
 
 		cloth->GlUpdate();
-		cloth->Simulate();
+		//cloth->Simulate();
 		
 		cloth->Rendering(camera, lineMode);
 
 		bodyShader.use();
 		bodyShader.setMat4("MVP", MVP);
-		//body->GlDrawModel(bodyShader, lineMode);
+		body->GlDrawModel(bodyShader, lineMode);
 
 		//bvh->DrawExternalBBox(camera);
 		//bvh->DrawSubBBoxs(camera);
+		objBVH->GlDraw(camera);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

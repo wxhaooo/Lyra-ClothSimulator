@@ -167,7 +167,7 @@ void Lyra::ClothPatch<T>::Init(ClothPatchParms<T> &parms)
 
 	//初始化三角形列表
 	auto &indices = mesh.Indices();
-	for (int i = 0; i < indices.size(); i += 3) {
+	for (uint32 i = 0; i < indices.size(); i += 3) {
 		//printf_s("%d %d %d\n", indices[i], indices[i + 1], indices[i + 2]);
 		triangleIndices.push_back(vec3<uint32>(indices[i], indices[i + 1], indices[i + 2]));
 	}

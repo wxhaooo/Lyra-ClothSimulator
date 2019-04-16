@@ -3,6 +3,8 @@
 #include"LyraFunction.h"
 #include"Particle.h"
 
+#include"BBox.h"
+
 namespace Lyra
 {
 	template<typename T> class TrianglePatch;
@@ -41,6 +43,7 @@ namespace Lyra
 
 			return (x31.cross(x21)).normalized();
 		}
+		BBox<T> GetBBox(Shader<T>& shader, bool draw = false);
 
 		T Area() 
 		{
@@ -95,6 +98,8 @@ Lyra::TrianglePatch<T>::TrianglePatch(particle_pt<T> xx1, particle_pt<T> xx2, pa
 
 	stretchFactorInUDir = stU;
 	stretchFactorInVDir = stV;
+
+	this->alpha = alpha;
 
 	T deltaU1 = x1->planeCoordinate[0] - x0->planeCoordinate[0];
 	T deltaU2 = x2->planeCoordinate[0] - x0->planeCoordinate[0];
@@ -357,5 +362,17 @@ void Lyra::TrianglePatch<T>::ExplicitDampingShearForce()
 	T cdot2 = pcpx2.dot(x2->velocity);
 	vec3<T> dampingp2 = dampingCoefficent * pcpx2 * cdot2;
 	x2->ApplyForce(dampingp2);
+}
+
+
+
+template<typename T>
+Lyra::BBox<T> Lyra::TrianglePatch<T>::GetBBox(Lyra::Shader<T>& shader, bool draw)
+{
+	vec3<T> minCornerCoord, maxCornerCoord;
+	minCornerCoord = Min(x0->position, x1->position, x2->position);
+	maxCornerCoord = Max(x0->position, x1->position, x2->position);
+
+	return Lyra::BBox<T>(minCornerCoord, maxCornerCoord, shader, draw);
 }
 
