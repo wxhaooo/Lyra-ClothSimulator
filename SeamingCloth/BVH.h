@@ -2,6 +2,7 @@
 #include"BBox.h"
 #include"BBoxTriangle.h"
 #include"Shader.h"
+#include"colorMapper.h"
 
 #include<GraphicHelper/Model.h>
 #include<GraphicHelper/Camera.h>
@@ -40,12 +41,14 @@ namespace Lyra
 	{
 		uint32 parent;
 		uint32 start, end;
+		uint32 level;
 	};
 
 	template<typename T>
 	struct BVHFlatNode {
 		BBox<T> bBox;
 		uint32 start, nPrims, rightOffset;
+		uint32 level;
 	};
 }
 
@@ -65,6 +68,9 @@ namespace Lyra
 		ObjectBVH() = default;
 
 		void Build(ModelPointer<T>& model, uint32 leafSize, Shader<T>& shader, bool draw = false);
+		void DebugGlDraw(Camera<T>& camera);
+		void DebugGlBind();
+
 		void GlDraw(Camera<T>& camera);
 		void GlBind();
 
@@ -97,7 +103,7 @@ namespace Lyra
 }
 
 template<typename T>
-void Lyra::ObjectBVH<T>::GlBind()
+void Lyra::ObjectBVH<T>::DebugGlBind()
 {
 	for (auto& bbox : bBoxes) {
 		bbox.GlBind();
@@ -105,10 +111,33 @@ void Lyra::ObjectBVH<T>::GlBind()
 }
 
 template<typename T>
-void Lyra::ObjectBVH<T>::GlDraw(Camera<T>& camera)
+void Lyra::ObjectBVH<T>::DebugGlDraw(Camera<T>& camera)
 {
 	for (auto& bbox : bBoxes) {
 		bbox.GlDraw(camera);
+	}
+}
+
+template<typename T>
+void Lyra::ObjectBVH<T>::GlDraw(Camera<T>& camera)
+{
+	for (auto& flatNode : flatBvhTree) {
+		//if(flatNode.level == 8)
+		flatNode.bBox.GlDraw(camera);
+	}
+}
+
+template<typename T>
+void Lyra::ObjectBVH<T>::GlBind()
+{
+	glm::vec<3, T> color;
+	ColorMapper<T> mapper;
+	uint32 totalLevel = ceil(std::log2(flatBvhTree.size()));
+	
+	for (auto& flatNode : flatBvhTree) {
+		T tmp = (flatNode.level + 1) / T(totalLevel + 1);
+		mapper.GetGlmColor(tmp, Lyra::ColorMap::COLOR__MAGMA,color);
+		flatNode.bBox.GlInit(color);
 	}
 }
 
@@ -134,6 +163,7 @@ void Lyra::ObjectBVH<T>::Create(uint32 leafSize,Shader<T>& shader, bool draw)
 	root.start = 0;
 	root.end = fragments.size();
 	root.parent = BvhMagicNumber::ROOT_PARENT;
+	root.level = 0;
 
 	todo.push(root);
 
@@ -152,8 +182,9 @@ void Lyra::ObjectBVH<T>::Create(uint32 leafSize,Shader<T>& shader, bool draw)
 		node.start = startTmp;
 		node.nPrims = nPrims;
 		node.rightOffset = BvhMagicNumber::UNTOUCHED;
+		node.level = bNode.level;
 
-		BBox<T> bb(fragments[startTmp].GetBBox(shader, draw));
+		BBox<T> bb(fragments[startTmp].GetBBox(shader, false));
 		//bc用于估计整个OBJ的质心位置,不需要渲染出来
 		BBox<T> bc(fragments[startTmp].GetCentroid(), shader, false);
 
@@ -161,7 +192,6 @@ void Lyra::ObjectBVH<T>::Create(uint32 leafSize,Shader<T>& shader, bool draw)
 			bb.ExpandToInclude(fragments[p].GetBBox(shader, false));
 			bc.ExpandToInclude(fragments[p].GetCentroid());
 		}
-
 		node.bBox = bb;
 
 		if (nPrims <= leafSize) {
@@ -199,11 +229,16 @@ void Lyra::ObjectBVH<T>::Create(uint32 leafSize,Shader<T>& shader, bool draw)
 		curNode.start = mid;
 		curNode.end = endTmp;
 		curNode.parent = nNodes - 1;
+		curNode.level = flatBvhTree[curNode.parent].level + 1;
+		//std::cout << curNode.level << "\n\n";
 		todo.push(curNode);
 
 		curNode.start = startTmp;
 		curNode.end = mid;
 		curNode.parent = nNodes - 1;
+		curNode.level = flatBvhTree[curNode.parent].level + 1;
+
+		//system("pause");
 		todo.push(curNode);
 	}
 }

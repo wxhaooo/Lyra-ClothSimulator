@@ -18,7 +18,7 @@ std::string fragmentShaderPath = "../SeamingCloth/shader/bboxFragmentShader.fs";
 constexpr uint32 MAXN = 10;
 constexpr float MAXF = 10e6;
 
-default_random_engine e(time(0));
+default_random_engine e(time(nullptr));
 uniform_int_distribution<uint32> u(0, MAXN);
 uniform_real_distribution<float> v(0, MAXF);
 

@@ -133,6 +133,8 @@
     <ClInclude Include="BBoxTriangle.h" />
     <ClInclude Include="BVH.h" />
     <ClInclude Include="Cloth.h" />
+    <ClInclude Include="colormaps.h" />
+    <ClInclude Include="colorMapper.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="ForceSwitch.h" />
     <ClInclude Include="LyraFunction.h" />

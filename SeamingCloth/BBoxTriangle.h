@@ -4,7 +4,6 @@
 #include"BBox.h"
 #include"Particle.h"
 
-
 #include<GraphicHelper/Vertex.h>
 
 namespace Lyra

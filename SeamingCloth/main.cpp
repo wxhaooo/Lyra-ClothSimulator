@@ -18,8 +18,8 @@
 
 /*当前存在的问题：
 1. 无法匹配真实参数（模型问题）
-2. 对非rest state的布料没法缝合
-3. damping引起的偶尔崩溃
+2. 对非rest state的布料没法缝合（积分方法问题）
+3. damping引起的偶尔崩溃（积分方法问题）
 */
 
 //live share test
@@ -45,7 +45,7 @@ std::string bodyGeometryShaderPath = "./shader/bodyGeometryShader.gs";
 std::string bodyFragmentShaderPath = "./shader/bodyFragmentShader.fs";
 
 std::string bodyPath = "./model/rock/rock.obj";
-
+//std::string bodyPath = "./patch/UvObj_Origin_Back_15.obj";
 gph::Camera<float> camera;
 
 int main()
@@ -58,9 +58,9 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow *window = glfwCreateWindow(screenWidth, screenHeight, "Cloth Simulation", NULL, NULL);
+	GLFWwindow *window = glfwCreateWindow(screenWidth, screenHeight, "Cloth Simulation", nullptr, nullptr);
 
-	if (window == NULL) {
+	if (window == nullptr) {
 		std::cerr << "creating windows failed\n";
 		glfwTerminate();
 		system("pause");
@@ -126,7 +126,7 @@ int main()
 
 	///////////////////////////////BVH Build////////////////////////////////////////////////////
 	Lyra::objectBvh_up<float> objBVH= std::make_unique<Lyra::ObjectBVH<float>>();
-	objBVH->Build(body, 4,bvhShader, true);
+	objBVH->Build(body, 1, bvhShader, false);
 	/*Lyra::uniformBvh_up<float> bvh = std::make_unique<Lyra::UniformBVH<float>>();
 
 	Lyra::vec3<float> center(0.f, -65.f, 5.f);

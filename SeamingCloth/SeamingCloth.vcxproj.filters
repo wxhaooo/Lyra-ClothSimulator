@@ -66,6 +66,12 @@
     <ClInclude Include="LyraRandom.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="colormaps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="colorMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

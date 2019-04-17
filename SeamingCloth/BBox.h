@@ -11,7 +11,6 @@
 namespace Lyra
 {
 	template<typename T> class BBox;
-	
 }
 
 namespace gph = GraphicHelper;
@@ -36,11 +35,14 @@ namespace Lyra
 		bool PointInBox(vec3<T> &point);
 		void Init(const vec3<T> &minCornerCoord, const vec3<T> &maxCornerCoord, Shader<T> &shader, bool draw = false);
 		void Init(vec3<T> &center, vec3<T> &halfExtent,Shader<T> &shader, bool draw = false);
+		void InitDraw(glm::vec<3, T>& color);
 		void InitDraw();
 		void GlBind();
 		void GlUpdate();
-		void GlDraw(gph::Camera<T> &camera);
+		void GlDraw(gph::Camera<T>& camera);
 		bool IsDraw() { return draw; }
+		//Init Draw Info and Bind Vertex Buffer
+		void GlInit(glm::vec<3, T>& color) { InitDraw(color); GlBind(); }
 	public:
 		vec3<T> center;
 		vec3<T> halfExtent;
@@ -177,6 +179,13 @@ void Lyra::BBox<T>::Init(vec3<T> &center, vec3<T> &halfExtent, Shader<T> &shader
 template<typename T>
 void Lyra::BBox<T>::InitDraw()
 {
+	glm::vec<3, T> color = ColorGenerator<T>();
+	InitDraw(color);
+}
+
+template<typename T>
+void Lyra::BBox<T>::InitDraw(glm::vec<3, T>& color)
+{
 	vec3<T> tmp;
 
 	float deltaX = halfExtent(0);
@@ -213,7 +222,7 @@ void Lyra::BBox<T>::InitDraw()
 	indices.push_back(vec4<uint32>(3, 2, 6, 7));
 	indices.push_back(vec4<uint32>(0, 1, 5, 4));
 
-	RGB = ColorGenerator<T>();
+	RGB = color;
 }
 
 template<typename T>
