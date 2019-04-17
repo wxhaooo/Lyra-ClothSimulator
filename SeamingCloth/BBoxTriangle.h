@@ -27,6 +27,7 @@ namespace Lyra
 
 		virtual BBox<T> GetBBox(Shader<T>& shader, bool draw = false) = 0;
 		virtual vec3<T> GetCentroid() = 0;
+		//virtual bool IsIntersectWithBBox(BBox<T>& bBox) = 0;
 	};
 }
 
@@ -55,15 +56,19 @@ namespace Lyra
 	{
 	public:
 		BBoxClothTriangle() = default;
-		BBoxClothTriangle(particle_pt<T>& p0, particle_pt<T>& p1, particle_pt<T>& p2);
+		BBoxClothTriangle(particle_pt<T> p0, particle_pt<T> p1, particle_pt<T> p2);
 
 		BBox<T> GetBBox(Shader<T>& shader, bool draw = false) override;
 		vec3<T> GetCentroid() override;
+
+		bool IsIntersectWithBBox(BBox<T>& bBox);
 
 	private:
 		particle_pt<T> p0, p1, p2;
 	};
 }
+
+////////////////////////////////////////BBoxObjTriangle////////////////////////////////////////////////
 
 template<typename T>
 Lyra::BBoxObjTriangle<T>::BBoxObjTriangle(VertexPointer<T>& vv0, VertexPointer<T>& vv1, VertexPointer<T>& vv2)
@@ -96,8 +101,10 @@ Lyra::vec3<T> Lyra::BBoxObjTriangle<T>::GetCentroid()
 	return vec3<T>(centroid.x, centroid.y, centroid.z);
 }
 
+////////////////////////////////////////BBoxClothTriangle////////////////////////////////////////////////
+
 template<typename T>
-Lyra::BBoxClothTriangle<T>::BBoxClothTriangle(particle_pt<T>& pp0, particle_pt<T>& pp1, particle_pt<T>& pp2)
+Lyra::BBoxClothTriangle<T>::BBoxClothTriangle(particle_pt<T> pp0, particle_pt<T> pp1, particle_pt<T> pp2)
 {
 	p0 = pp0; p1 = pp1; p2 = pp2;
 }
@@ -113,4 +120,18 @@ Lyra::BBox<T> Lyra::BBoxClothTriangle<T>::GetBBox(Shader<T>& shader, bool draw)
 	const vec3<T> maxCornerCoord(maxCornerCoordTmp(0), maxCornerCoordTmp(1), maxCornerCoordTmp(2));
 
 	return Lyra::BBox<T>(minCornerCoord, maxCornerCoord, shader, draw);
+}
+
+template<typename T>
+Lyra::vec3<T> Lyra::BBoxClothTriangle<T>::GetCentroid()
+{
+	vec3<T> centroid = T(1) / 3 * (p0->position + p1->position + p2->position);
+
+	return centroid;
+}
+
+template<typename T>
+bool Lyra::BBoxClothTriangle<T>::IsIntersectWithBBox(BBox<T>& bBox)
+{
+	//triangle-AABB intersection test
 }

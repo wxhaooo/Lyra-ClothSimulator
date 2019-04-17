@@ -36,6 +36,7 @@ namespace Lyra
 		std::vector<vec3<uint32>> &TriangleIndices() { return triangleIndices; }
 		std::vector<vec3<uint32>> &GlobalTriangleIndices() { return globalTriangleIndices; }
 		gph::ModelPointer<T> PatchMesh() { return patchMesh; }
+		std::vector<TrianglePatch<T>>& TrianglePatches() { return trianglePatches; }
 		uint32_sp &Mapping() { return mapping; }
 		uint32 NumberOfParticle() { return numberOfParticle; }
 
@@ -124,7 +125,7 @@ namespace Lyra
 	template<typename T>
 	using clothPatch_sp = std::shared_ptr<ClothPatch<T>>;
 	template<typename T>
-	using clothPatch_up = std::shared_ptr<ClothPatch<T>>;
+	using clothPatch_up = std::unique_ptr<ClothPatch<T>>;
 	template<typename T>
 	using clothPatch_pt = ClothPatch<T> *;
 }

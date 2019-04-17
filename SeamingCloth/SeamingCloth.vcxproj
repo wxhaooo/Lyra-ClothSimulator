@@ -133,12 +133,14 @@
     <ClInclude Include="BBoxTriangle.h" />
     <ClInclude Include="BVH.h" />
     <ClInclude Include="Cloth.h" />
+    <ClInclude Include="ClothBVH.h" />
     <ClInclude Include="colormaps.h" />
     <ClInclude Include="colorMapper.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="ForceSwitch.h" />
     <ClInclude Include="LyraFunction.h" />
     <ClInclude Include="LyraRandom.h" />
+    <ClInclude Include="ObjectBVH.h" />
     <ClInclude Include="ParmSwitch.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="ClothPatch.h" />
@@ -150,6 +152,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.md" />
+    <None Include="DONELIST.md" />
+    <None Include="TODOLIST.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

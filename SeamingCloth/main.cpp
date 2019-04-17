@@ -5,7 +5,8 @@
 #include"BBox.h"
 #include"UniformBVH.h"
 
-#include"BVH.h"
+#include"ObjectBVH.h"
+#include"ClothBVH.h"
 
 #include<iostream>
 #include<cassert>
@@ -125,8 +126,8 @@ int main()
 	body->LoadModel(bodyPath);
 
 	///////////////////////////////BVH Build////////////////////////////////////////////////////
-	Lyra::objectBvh_up<float> objBVH= std::make_unique<Lyra::ObjectBVH<float>>();
-	objBVH->Build(body, 1, bvhShader, false);
+	/*Lyra::objectBvh_up<float> objBVH= std::make_unique<Lyra::ObjectBVH<float>>();
+	objBVH->Build(body, 1, bvhShader, false);*/
 	/*Lyra::uniformBvh_up<float> bvh = std::make_unique<Lyra::UniformBVH<float>>();
 
 	Lyra::vec3<float> center(0.f, -65.f, 5.f);
@@ -433,11 +434,16 @@ int main()
 	cloth->AddSeamingInfo(seamingInfo1);
 	cloth->Integrate(clothParms);
 
+	Lyra::ClothBVH<float> clothBvh;
+	clothBvh.Build(clothPatch0, 1, bvhShader);
+
+	clothBvh.GlBind();
+
 	cloth->GlBind();
 
 	body->GlBind();
 
-	objBVH->GlBind();
+	//objBVH->GlBind();
 
 	camera.Init(setting, modelMat);
 
@@ -464,7 +470,9 @@ int main()
 
 		//bvh->DrawExternalBBox(camera);
 		//bvh->DrawSubBBoxs(camera);
-		objBVH->GlDraw(camera);
+		//objBVH->GlDraw(camera);
+
+		clothBvh.GlDraw(camera);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

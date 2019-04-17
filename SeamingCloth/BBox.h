@@ -8,6 +8,10 @@
 
 #include<vector>
 
+/*Wating to Test Functions*/
+
+//bool IsIntersectWithBBox(BBox<T>& bBox);
+
 namespace Lyra
 {
 	template<typename T> class BBox;
@@ -26,15 +30,15 @@ namespace Lyra
 		BBox(const vec3<T> &minCornerCoord, const vec3<T> &maxCornerCoord, Shader<T> &shader, bool draw = false);
 		BBox(const vec3<T>& p, Shader<T>& shader, bool draw = false);
 
-		void ExpandToInclude(const vec3<T> &p);
-		void ExpandToInclude(const BBox<T> &bBox);
-
+		//////////////////////////////Functions to build BVH//////////////////////////////////////
+		void ExpandToInclude(const vec3<T>& p);
+		void ExpandToInclude(const BBox<T>& bBox);
 		uint32 MaxDimension() const;
 		T SurfaceArea() const;
-
-		bool PointInBox(vec3<T> &point);
-		void Init(const vec3<T> &minCornerCoord, const vec3<T> &maxCornerCoord, Shader<T> &shader, bool draw = false);
-		void Init(vec3<T> &center, vec3<T> &halfExtent,Shader<T> &shader, bool draw = false);
+		/////////////////////////////Collision Detection//////////////////////////////////////////
+		bool IsPointInBox(vec3<T>& point);
+		bool IsIntersectWithBBox(BBox<T>& bBox);
+		/////////////////////////////Visualize BBox///////////////////////////////////////////////
 		void InitDraw(glm::vec<3, T>& color);
 		void InitDraw();
 		void GlBind();
@@ -43,6 +47,11 @@ namespace Lyra
 		bool IsDraw() { return draw; }
 		//Init Draw Info and Bind Vertex Buffer
 		void GlInit(glm::vec<3, T>& color) { InitDraw(color); GlBind(); }
+
+	private:
+		///////////////////////////Init BBox//////////////////////////////////////////////////////
+		void Init(const vec3<T>& minCornerCoord, const vec3<T>& maxCornerCoord, Shader<T>& shader, bool draw = false);
+		void Init(vec3<T>& center, vec3<T>& halfExtent, Shader<T>& shader, bool draw = false);
 	public:
 		vec3<T> center;
 		vec3<T> halfExtent;
@@ -130,7 +139,17 @@ void Lyra::BBox<T>::ExpandToInclude(const BBox<T>& bBox)
 }
 
 template<typename T>
-bool Lyra::BBox<T>::PointInBox(vec3<T> &point)
+bool Lyra::BBox<T>::IsIntersectWithBBox(BBox<T>& bBox)
+{
+	if (maxCorner(0) < bBox.minCorner(0) || minCorner(0) > bBox.maxCorner(0)) return false;
+	if (maxCorner(1) < bBox.minCorner(1) || minCorner(1) > bBox.maxCorner(1)) return false;
+	if (maxCorner(2) < bBox.minCorner(2) || minCorner(2) > bBox.maxCorner(2)) return false;
+
+	return true;
+}
+
+template<typename T>
+bool Lyra::BBox<T>::IsPointInBox(vec3<T> &point)
 {
 	if (point[0] >= minCorner[0] && point[1] >= minCorner[1] && point[2] >= minCorner[2]
 		&& point[0] <= maxCorner[0] && point[1] <= maxCorner[1] && point[2] <= maxCorner[2])

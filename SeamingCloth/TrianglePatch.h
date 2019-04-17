@@ -23,7 +23,7 @@ namespace Lyra
 					  uint32 ind0, uint32 ind1, uint32 ind2, T stc, T shc, T dstc, T dshc, T stU, T stV,T alpha);
 
 	public:
-		/*Interface to priavate Functions*/
+		/*Interface to private Functions*/
 		uint32 index0() { return ind0; }
 		uint32 index1() { return ind1; }
 		uint32 index2() { return ind2; }
@@ -43,7 +43,6 @@ namespace Lyra
 
 			return (x31.cross(x21)).normalized();
 		}
-		BBox<T> GetBBox(Shader<T>& shader, bool draw = false);
 
 		T Area() 
 		{
@@ -363,16 +362,3 @@ void Lyra::TrianglePatch<T>::ExplicitDampingShearForce()
 	vec3<T> dampingp2 = dampingCoefficent * pcpx2 * cdot2;
 	x2->ApplyForce(dampingp2);
 }
-
-
-
-template<typename T>
-Lyra::BBox<T> Lyra::TrianglePatch<T>::GetBBox(Lyra::Shader<T>& shader, bool draw)
-{
-	vec3<T> minCornerCoord, maxCornerCoord;
-	minCornerCoord = Min(x0->position, x1->position, x2->position);
-	maxCornerCoord = Max(x0->position, x1->position, x2->position);
-
-	return Lyra::BBox<T>(minCornerCoord, maxCornerCoord, shader, draw);
-}
-
