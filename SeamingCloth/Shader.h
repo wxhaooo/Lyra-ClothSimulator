@@ -8,6 +8,8 @@
 #include <sstream>
 #include <iostream>
 
+#include<memory>
+
 namespace Lyra
 {
 	template<typename T> class Shader;
@@ -200,4 +202,11 @@ namespace Lyra
 			}
 		}
 	};
+
+	template<typename T>
+	using shader_sp = std::shared_ptr<Shader<T>>;
+	template<typename T>
+	using shader_up = std::unique_ptr<Shader<T>>;
+	template<typename T>
+	using shader_pt = Shader<T>*;
 }

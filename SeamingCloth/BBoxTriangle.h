@@ -27,6 +27,7 @@ namespace Lyra
 		BBoxTriangle() = default;
 
 		virtual BBox<T> GetBBox(Shader<T>& shader, bool draw = false) = 0;
+		virtual vec3<T> GetCentroid() = 0;
 	};
 }
 
@@ -40,6 +41,7 @@ namespace Lyra
 		BBoxObjTriangle(VertexPointer<T>& vv1, VertexPointer<T>& vv2, VertexPointer<T>& vv3);
 
 		BBox<T> GetBBox(Shader<T>& shader, bool draw = false) override;
+		vec3<T> GetCentroid() override;
 
 		VertexPointer<T> V0() { return v0; }
 		VertexPointer<T> V1() { return v1; }
@@ -57,6 +59,7 @@ namespace Lyra
 		BBoxClothTriangle(particle_pt<T>& p0, particle_pt<T>& p1, particle_pt<T>& p2);
 
 		BBox<T> GetBBox(Shader<T>& shader, bool draw = false) override;
+		vec3<T> GetCentroid() override;
 
 	private:
 		particle_pt<T> p0, p1, p2;
@@ -84,6 +87,14 @@ Lyra::BBox<T> Lyra::BBoxObjTriangle<T>::GetBBox(Shader<T>& shader, bool draw)
 	const vec3<T> maxCornerCoord(maxCoordTmp(0), maxCoordTmp(1), maxCoordTmp(2));
 
 	return Lyra::BBox<T>(minCornerCoord, maxCornerCoord, shader, draw);
+}
+
+template<typename T>
+Lyra::vec3<T> Lyra::BBoxObjTriangle<T>::GetCentroid()
+{
+	glm::vec<3, T> centroid = T(1) / 3 * (v0->position + v1->position + v2->position);
+
+	return vec3<T>(centroid.x, centroid.y, centroid.z);
 }
 
 template<typename T>

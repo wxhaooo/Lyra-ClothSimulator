@@ -126,7 +126,7 @@ int main()
 
 	///////////////////////////////BVH Build////////////////////////////////////////////////////
 	Lyra::objectBvh_up<float> objBVH= std::make_unique<Lyra::ObjectBVH<float>>();
-	objBVH->Build(body, bvhShader, true);
+	objBVH->Build(body, 4,bvhShader, true);
 	/*Lyra::uniformBvh_up<float> bvh = std::make_unique<Lyra::UniformBVH<float>>();
 
 	Lyra::vec3<float> center(0.f, -65.f, 5.f);
