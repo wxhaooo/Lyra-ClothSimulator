@@ -78,6 +78,15 @@
     <ClInclude Include="ClothBVH.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CollisionResult.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ClothEdge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjectEdge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

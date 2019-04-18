@@ -63,6 +63,10 @@ namespace Lyra
 
 		bool IsIntersectWithBBox(BBox<T>& bBox);
 
+		particle_pt<T> P0() { return p0; }
+		particle_pt<T> P1() { return p1; }
+		particle_pt<T> P2() { return p2; }
+
 	private:
 		particle_pt<T> p0, p1, p2;
 	};

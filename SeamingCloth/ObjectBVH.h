@@ -15,18 +15,22 @@ namespace Lyra
 	public:
 		ObjectBVH() = default;
 
-		void Build(ModelPointer<T>& model, uint32 leafSize, Shader<T>& shader, bool draw = false);
-		void DebugGlDraw(Camera<T>& camera);
-		void DebugGlBind();
+		/*Interface to private data memeber*/
+		std::vector<BVHFlatNode<T>>& FlatBVHTree() { return flatBvhTree; }
+		std::vector<BBoxObjTriangle<T>>& Fragments() { return fragments; }
 
-		void GlDraw(Camera<T>& camera);
-		void GlBind();
+		void Build(ModelPointer<T>& model, uint32 leafSize, Shader<T>& shader, bool draw = false);
+		void DebugGlDraw(Camera<T>& camera) override;
+		void DebugGlBind() override;
+
+		void GlDraw(Camera<T>& camera) override;
+		void GlBind() override;
 
 	private:
 		void Init(ModelPointer<T>& model);
-		void DebugCreate(Shader<T>& shader, bool draw);
+		void DebugCreate(Shader<T>& shader, bool draw) override;
 
-		void Create(uint32 leafSize, Shader<T>& shader, bool draw);
+		void Create(uint32 leafSize, Shader<T>& shader, bool draw) override;
 
 	private:
 		std::vector<BBoxObjTriangle<T>> fragments;

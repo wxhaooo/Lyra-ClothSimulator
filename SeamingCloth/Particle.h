@@ -6,19 +6,11 @@
 namespace Lyra
 {
 	template<typename T> struct Particle;
-	template<typename T> struct CollisionInfo;
 }
 
 namespace Lyra
 {
-	template<typename T>
-	struct CollisionInfo
-	{
-		bool isCollided;
-		vec3<T> v1, v2, v3;
-		vec3<T> baracenter;
-		vec3<T> triangleNormal;
-	};
+	
 }
 
 namespace Lyra
@@ -37,8 +29,6 @@ namespace Lyra
 		vec3<T> velocity;
 		vec3<T> acceleration;
 		vec3<T> preAccleration;
-
-		CollisionInfo<T> collisionInfo;
 
 		Particle() = default;
 		~Particle() = default;
@@ -76,7 +66,7 @@ Lyra::Particle<T>::Particle(vec2<T> &planeCoord, vec3<T> &worldPos, T mass, bool
 
 	movable = mv;
 
-	collisionInfo.isCollided = false;
+	//collisionInfo.isCollided = false;
 	this->mass = mass;
 }
 

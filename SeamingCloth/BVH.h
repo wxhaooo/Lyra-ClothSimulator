@@ -9,6 +9,7 @@
 #include<memory>
 #include<vector>
 #include<stack>
+#include<utility>
 
 namespace Lyra
 {
@@ -46,10 +47,25 @@ namespace Lyra
 		uint32 start, nPrims, rightOffset;
 		uint32 level;
 	};
+
+	template<typename T>
+	using BVHCollisionPair = std::pair<BVHFlatNode<T>, BVHFlatNode<T>>;
+
+	//抽象类只提供接口，不要有数据成员
 	template<typename T>
 	class BVH
 	{
 	public:
 		BVH() = default;
+		virtual void DebugGlDraw(Camera<T>& camera) = 0;
+		virtual void DebugGlBind() = 0;
+
+		virtual void GlDraw(Camera<T>& camera) = 0;
+		virtual void GlBind() = 0;
+
+	private:
+		virtual void DebugCreate(Shader<T>& shader, bool draw) = 0;
+
+		virtual void Create(uint32 leafSize, Shader<T>& shader, bool draw) = 0;
 	};
 }
