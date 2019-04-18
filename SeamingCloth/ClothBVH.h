@@ -4,6 +4,8 @@
 #include"ObjectBVH.h"
 #include"CollisionResult.h"
 
+#include<ExactCCD/rootparitycollisiontest.h>
+
 #include<stack>
 
 namespace Lyra
@@ -260,6 +262,7 @@ void Lyra::ClothBVH<T>::Point2TriangleCollisionDetect(particle_pt<T> p, BBoxObjT
 	CollisionResults_C2O<T>& collsionResult)
 {
 	//single edge-edge pair test
+
 }
 
 template<typename T>

@@ -6,8 +6,7 @@
 
 ## 碰撞
 
-* 遍历两个BVH找到需要测试的triangle-triangle 对
-* vertex-triangle & edge-edge collision detect
+
 * 更好的cloth-object碰撞响应
 * 更好的cloth-cloth碰撞响应
 
