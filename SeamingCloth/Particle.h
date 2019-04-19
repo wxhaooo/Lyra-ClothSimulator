@@ -20,6 +20,7 @@ namespace Lyra
 	{
 		T mass;
 		bool movable;
+		bool isCollide;
 
 		vec2<T> planeCoordinate;
 		//t时刻的位置
@@ -39,6 +40,8 @@ namespace Lyra
 		void ApplyForce(vec3<T> force);
 
 		void UpdatePseudoPosition(T delta_t);
+
+		void DebugUpdatePosition(T delta_t);
 
 		void UpdatePosition(T delta_t);
 
@@ -66,8 +69,10 @@ Lyra::Particle<T>::Particle(vec2<T> &planeCoord, vec3<T> &worldPos, T mass, bool
 	velocity = vec3<T>(0., 0., 0.);
 	acceleration = vec3<T>(0., 0., 0.);
 	preAccleration = vec3<T>(0., 0., 0.);
+	pseudoVelocity = vec3<T>(0., 0., 0.);
 
 	movable = mv;
+	isCollide = false;
 
 	//collisionInfo.isCollided = false;
 	this->mass = mass;
@@ -101,7 +106,14 @@ void Lyra::Particle<T>::UpdatePosition(T delta_t)
 	prePosition = tmp;
 	//这里估计的是t+\delta t时刻的速度
 	velocity = (position - prePosition)/delta_t;
+	//velocity = (position - prePosition);
 	acceleration.setZero();
+}
+
+template<typename T>
+void Lyra::Particle<T>::DebugUpdatePosition(T delta_t)
+{
+	
 }
 
 template<typename T>

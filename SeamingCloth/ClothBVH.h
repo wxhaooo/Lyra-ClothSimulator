@@ -26,6 +26,8 @@ namespace Lyra
 		std::vector<BVHFlatNode<T>>& FlatBVHTree() { return flatBvhTree; }
 		std::vector<BBoxClothTriangle<T>>& Fragments() { return fragments; }
 
+		uint32 NLevels() { return nLevels; }
+
 		/*Interface to Build Cloth BVH*/
 		void Build(std::vector<TrianglePatch<T>>& triangles, uint32 leafSize, shader_sp<T> shader=nullptr, bool draw = false);
 		void ReBuild(std::vector<TrianglePatch<T>>& triangles, uint32 leafSize, shader_sp<T> shader = nullptr, bool draw = false);
@@ -81,7 +83,7 @@ namespace Lyra
 		std::vector<BBoxClothTriangle<T>> fragments;
 		std::vector<BBox<T>> bBoxes;
 		std::vector<BVHFlatNode<T>> flatBvhTree;
-		uint32 nNodes, nLeafs, leafSize;
+		uint32 nNodes, nLeafs, leafSize, nLevels;
 	};
 
 	template<typename T>
@@ -99,6 +101,7 @@ void Lyra::ClothBVH<T>::ReBuild(std::vector<TrianglePatch<T>>& triangles, uint32
 	flatBvhTree.clear();
 	nNodes = 0;
 	nLeafs = 0;
+	nLevels = 0;
 	this->leafSize = leafSize;
 
 	Build(triangles, leafSize, shader, draw);
@@ -255,13 +258,18 @@ void Lyra::ClothBVH<T>::Create(uint32 leafSize, shader_sp<T> shader, bool draw)
 		//system("pause");
 		todo.push(curNode);
 	}
+
+	nLevels = ceil(std::log2(flatBvhTree.size()));
 }
 
 template<typename T>
 void Lyra::ClothBVH<T>::CollisionWithObjBVH(ObjectBVH<T>& objectBVH, CollisionResults_C2O<T>& collisionResult)
 {
-	auto objectFlatBvhTree = objectBVH.FlatBVHTree();
-	auto objectFragments = objectBVH.Fragments();
+	auto& objectFlatBvhTree = objectBVH.FlatBVHTree();
+	auto& objectFragments = objectBVH.Fragments();
+
+	//printf_s("%d %d\n", objectFlatBvhTree.size(), objectFragments.size());
+	//system("pause");
 
 	BVHCollisionDetect(flatBvhTree, objectFlatBvhTree, fragments, objectFragments, collisionResult);
 }
@@ -276,36 +284,70 @@ void Lyra::ClothBVH<T>::BVHCollisionDetect(
 	auto& root0 = bvh0[0];
 	auto& root1 = bvh1[0];
 
+	/*printf_s("%d %d\n", bvh0.size(), bvh1.size());
+	system("pause");*/
+
 	std::stack<BVHCollisionPair<T>> s;
 
-	s.push(std::make_pair(root0, root1));
+	BVHCollisionPair<T> root;
+	root.p0Index = 0;
+	root.p1Index = 0;
+	root.p0 = root0;
+	root.p1 = root1;
+
+	s.push(root);
 
 	while (!s.empty()) {
 		auto& curPair = s.top();
 		s.pop();
 
-		bool bBoxOverlap = curPair.first.bBox.IsIntersectWithBBox(curPair.second.bBox);
+		//printf_s("%d\n", s.size());
+
+		bool bBoxOverlap = curPair.p0.bBox.IsIntersectWithBBox(curPair.p1.bBox);
 		if (!bBoxOverlap) continue;
 
 		//如果都是叶子节点,检查叶子节点中的triangle的相交情况
-		if (curPair.first.rightOffset == 0 && curPair.second.rightOffset == 0) {
+		if (curPair.p0.rightOffset == 0 && curPair.p1.rightOffset == 0) {
 			CollidePrimitives(curPair, fragment0, fragment1, collsionResult);
 		}
 		else {
 			if (DescendStrategy(curPair)) {
 
-				uint32 posLeftChild = curPair.first.start + 1;
-				uint32 posRightChild = curPair.first.start + curPair.first.rightOffset;
+				uint32 posLeftChild = curPair.p0Index + 1;
+				uint32 posRightChild = curPair.p0Index + curPair.p0.rightOffset;
 
-				s.push(std::make_pair(bvh0[posRightChild], curPair.second));
-				s.push(std::make_pair(bvh0[posLeftChild], curPair.second));
+				BVHCollisionPair<T> tmpPair;
+				tmpPair.p1Index = curPair.p1Index;
+				tmpPair.p1 = curPair.p1;
+
+				tmpPair.p0Index = posRightChild;
+				tmpPair.p0 = bvh0[posRightChild];
+				
+				s.push(tmpPair);
+
+				tmpPair.p0Index = posLeftChild;
+				tmpPair.p0 = bvh0[posLeftChild];
+
+				s.push(tmpPair);
 			}
 			else {
-				uint32 posLeftChild = curPair.second.start + 1;
-				uint32 posRightChild = curPair.second.start + curPair.second.rightOffset;
+				uint32 posLeftChild = curPair.p1Index + 1;
+				uint32 posRightChild = curPair.p1Index + curPair.p1.rightOffset;
 
-				s.push(std::make_pair(curPair.first, bvh1[posRightChild]));
-				s.push(std::make_pair(curPair.first, bvh1[posLeftChild]));
+				//printf_s("233333\n");
+				BVHCollisionPair<T> tmpPair;
+				tmpPair.p0Index = curPair.p0Index;
+				tmpPair.p0 = curPair.p0;
+
+				tmpPair.p1Index = posRightChild;
+				tmpPair.p1 = bvh1[posRightChild];
+
+				s.push(tmpPair);
+
+				tmpPair.p1Index = posLeftChild;
+				tmpPair.p1 = bvh1[posLeftChild];
+
+				s.push(tmpPair);
 			}
 		}
 	}
@@ -316,7 +358,7 @@ template<typename T>
 bool Lyra::ClothBVH<T>::DescendStrategy(BVHCollisionPair<T>& collisionPair)
 {
 	//优先遍历A树的策略
-	if (collisionPair.first.rightOffset == 0)
+	if (collisionPair.p0.rightOffset == 0)
 		return false;
 	return true;
 }
@@ -332,15 +374,15 @@ void Lyra::ClothBVH<T>::CollidePrimitives(BVHCollisionPair<T>& collisionPair,
 	std::vector<BBoxClothTriangle<T>> clothTriangles;
 	std::vector<BBoxObjTriangle<T>> objectTriangles;
 
-	uint32 startPos0 = collisionPair.first.start;
-	uint32 startPos1 = collisionPair.second.start;
+	uint32 startPos0 = collisionPair.p0.start;
+	uint32 startPos1 = collisionPair.p1.start;
 
 	//提取可能碰撞的cloth三角形
-	for (uint32 i = 0; i < collisionPair.first.nPrims; i++) {
+	for (uint32 i = 0; i < collisionPair.p0.nPrims; i++) {
 		clothTriangles.push_back(fragment0[startPos0 + i]);
 	}
 	//提取可能碰撞的object三角形
-	for (uint32 i = 0; i < collisionPair.second.nPrims; i++) {
+	for (uint32 i = 0; i < collisionPair.p1.nPrims; i++) {
 		objectTriangles.push_back(fragment1[startPos1 + i]);
 	}
 
@@ -439,11 +481,11 @@ bool Lyra::ClothBVH<T>::ExactEdge2EdgeCCD(ClothEdge<T>& clothEdge, ObjectEdge<T>
 	VertexPointer<T>& v1 = objectEdge.p1;
 
 	//cloth edge顶点的新旧位置
-	Vec3d p0Old(p0->pseudoPosition(0), p0->pseudoPosition(1), p0->pseudoPosition(2));
-	Vec3d p0New(p0->position(0), p0->position(1), p0->position(2));
+	Vec3d p0Old(p0->position(0), p0->position(1), p0->position(2));
+	Vec3d p0New(p0->pseudoPosition(0), p0->pseudoPosition(1), p0->pseudoPosition(2));
 
-	Vec3d p1Old(p1->pseudoPosition(0), p1->pseudoPosition(1), p1->pseudoPosition(2));
-	Vec3d p1New(p1->position(0), p1->position(1), p1->position(2));
+	Vec3d p1Old(p1->position(0), p1->position(1), p1->position(2));
+	Vec3d p1New(p1->pseudoPosition(0), p1->pseudoPosition(1), p1->pseudoPosition(2));
 
 	//object edge顶点的新旧位置一致
 	Vec3d v0Old(v0->position.x, v0->position.y, v0->position.z);
@@ -462,13 +504,13 @@ template<typename T>
 bool Lyra::ClothBVH<T>::ExactPoint2TriangleCCD(particle_pt<T> p, BBoxObjTriangle<T>& objTriangle)
 {
 	VertexPointer<T> t0 = objTriangle.V0();
-	VertexPointer<T> t1 = objTriangle.V0();
-	VertexPointer<T> t2 = objTriangle.V0();
+	VertexPointer<T> t1 = objTriangle.V1();
+	VertexPointer<T> t2 = objTriangle.V2();
 
 	//p是cloth上的点，triangle是object上的
-	Vec3d pOld(p->pseudoPosition(0), p->pseudoPosition(1), p->pseudoPosition(2));
-	Vec3d pNew(p->position(0), p->position(1), p->position(2));
-
+	Vec3d pOld(p->position(0), p->position(1), p->position(2));
+	Vec3d pNew(p->pseudoPosition(0), p->pseudoPosition(1), p->pseudoPosition(2));
+	
 	//triangle's vertex old position and new one
 	Vec3d t0Old(t0->position.x, t0->position.y, t0->position.z);
 	Vec3d t0New(t0->position.x, t0->position.y, t0->position.z);

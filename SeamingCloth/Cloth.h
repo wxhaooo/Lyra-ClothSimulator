@@ -161,6 +161,9 @@ namespace Lyra
 		void CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult);
 		void CollisionDetectWithOtherCloth();
 		void CollisionDetectWithSelf();
+
+		void DebugUpdatePosition();
+		void DebugCollisionResponse(CollisionResults_C2O<T>& collsionResult);
 	};
 
 	template<typename T>
@@ -483,10 +486,35 @@ void Lyra::Cloth<T>::CollisionDetectWithSelf()
 }
 
 template<typename T>
+void Lyra::Cloth<T>::DebugCollisionResponse(CollisionResults_C2O<T>& collsionResult)
+{
+	auto& edgeResults = collsionResult.edge2Edge;
+	auto& v2TriangleResults = collsionResult.vertex2Triangle;
+
+	for (auto& edge : edgeResults) {
+		edge.clothEdge0.p0->isCollide = true;
+		edge.clothEdge0.p1->isCollide = true;
+	}
+
+	for (auto& v2t : v2TriangleResults){
+		v2t.v0->isCollide = true;
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::DebugUpdatePosition()
+{
+	for (auto& p : particles) {
+		if (!p.isCollide)
+			p.UpdatePosition(parms.delta_t);
+	}
+}
+
+template<typename T>
 void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 {
 	BuildPatchBVH(1);
-	ApplyInternalForce();
+	//ApplyInternalForce();
 	ApplyExternalForce();
 
 	CollisionResults_C2O<T> collisionResults_C2O;
@@ -494,12 +522,18 @@ void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 
 	if (parms.enableCollisionDetect) {
 		UpdatePesudoPosition();
+		//printf_s("%d %d\n", objectBvh->Fragments().size(), objectBvh->FlatBVHTree().size());
 		CollisionDetectWithRigidbody(objectBvh, collisionResults_C2O);
 
-		printf_s("%d %d\n", collisionResults_C2O.edge2Edge.size(), 
-			collisionResults_C2O.vertex2Triangle.size());
+		/*printf_s("%d %d\n", collisionResults_C2O.edge2Edge.size(),
+			collisionResults_C2O.vertex2Triangle.size());*/
+
+		if (collisionResults_C2O.edge2Edge.size() != 0 || collisionResults_C2O.vertex2Triangle.size() != 0) {
+			DebugCollisionResponse(collisionResults_C2O);
+		}
 	}
-		UpdatePosition();
+	DebugUpdatePosition();
+		//UpdatePosition();
 	elapseTime += parms.delta_t;
 }
 

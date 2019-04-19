@@ -601,5 +601,7 @@ void Lyra::ClothPatch<T>::BuildBVH(uint32 leafSize, shader_sp<T> shader, bool dr
 template<typename T>
 void Lyra::ClothPatch<T>::CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult)
 {
+	/*std::cout << clothBvh.NLevels() << " " << objectBvh->NLevel() << "\n";
+	system("pause");*/
 	clothBvh.CollisionWithObjBVH(*objectBvh, collsionResult);
 }

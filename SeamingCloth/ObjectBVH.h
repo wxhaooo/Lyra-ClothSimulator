@@ -18,6 +18,7 @@ namespace Lyra
 		/*Interface to private data memeber*/
 		std::vector<BVHFlatNode<T>>& FlatBVHTree() { return flatBvhTree; }
 		std::vector<BBoxObjTriangle<T>>& Fragments() { return fragments; }
+		uint32 NLevel() { return nLevel; }
 
 		void Build(ModelPointer<T>& model, uint32 leafSize, shader_sp<T> shader = nullptr, bool draw = false);
 		void DebugGlDraw(Camera<T>& camera) override;
@@ -36,7 +37,7 @@ namespace Lyra
 		std::vector<BBoxObjTriangle<T>> fragments;
 		std::vector<BBox<T>> bBoxes;
 		std::vector<BVHFlatNode<T>> flatBvhTree;
-		uint32 nNodes, nLeafs, leafSize;
+		uint32 nNodes, nLeafs, leafSize, nLevel;
 	};
 
 	template<typename T>
@@ -186,6 +187,8 @@ void Lyra::ObjectBVH<T>::Create(uint32 leafSize, shader_sp<T> shader, bool draw)
 		//system("pause");
 		todo.push(curNode);
 	}
+
+	nLevel = ceil(std::log2(flatBvhTree.size()));
 }
 
 template<typename T>

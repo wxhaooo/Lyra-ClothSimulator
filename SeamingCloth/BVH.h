@@ -49,7 +49,16 @@ namespace Lyra
 	};
 
 	template<typename T>
-	using BVHCollisionPair = std::pair<BVHFlatNode<T>, BVHFlatNode<T>>;
+	struct BVHCollisionPair
+	{
+		BVHFlatNode<T> p0;
+		BVHFlatNode<T> p1;
+		//在vector<BVHFlatNode>中的index，用于遍历BVH树
+		uint32 p0Index, p1Index;
+	};
+
+	/*template<typename T>
+	using BVHCollisionPair = std::pair<BVHFlatNode<T>, BVHFlatNode<T>>;*/
 
 	//抽象类只提供接口，不要有数据成员
 	template<typename T>

@@ -47,7 +47,10 @@ std::string bodyFragmentShaderPath = "./shader/bodyFragmentShader.fs";
 
 std::string bodyPath = "./model/rock/rock.obj";
 //std::string bodyPath = "./patch/UvObj_Origin_Back_15.obj";
-gph::Camera<float> camera;
+
+using Type = float;
+
+gph::Camera<Type> camera;
 
 int main()
 {
@@ -92,15 +95,15 @@ int main()
 	modelMat = glm::translate(modelMat, glm::vec3(-0.f, -0.f, 0.f));
 	modelMat = glm::rotate(modelMat, Angle2Radian(-30), glm::vec3(0.f, 1.f, 0.f));
 
-	Lyra::Shader<float> sharedShader =  Lyra::Shader<float>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
+	Lyra::Shader<Type> sharedShader =  Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 
-	gph::CameraSetting<float> setting;
+	gph::CameraSetting<Type> setting;
 
 	{
 		//glm::rotate(modelMat, 90.f/180*PI, glm::vec3(1.f, 0.f, 0.f));
 		//如果相机位置正好和上向量(0.f,1.f,0.f)平行，那么就会出问题
-		glm::vec3 cameraPosition(-0.f, 10.0f, 150.0f);
-		glm::vec3 cameraTarget(0.f, 0.f, 0.f);
+		glm::vec<3, Type> cameraPosition(-0.f, 10.0f, 15.0f);
+		glm::vec<3, Type> cameraTarget(0.f, 0.f, 0.f);
 		setting.cameraMode = gph::CameraMode::CAMERA_PROJECTION;
 		setting.cameraPosition = cameraPosition;
 		setting.cameraTarget = cameraTarget;
@@ -121,13 +124,13 @@ int main()
 	//////////////////////////////body setting///////////////////////////////////////////////////
 	gph::Shader bodyShader(bodyVertexShaderPath.c_str(), bodyFragmentShaderPath.c_str());
 	//Lyra::Shader<float> bvhShader = Lyra::Shader<float>(bboxVertexShader.c_str(), bboxFragmentShader.c_str());
-	Lyra::shader_sp<float> bvhShader = std::make_shared<Lyra::Shader<float>>(bboxVertexShader.c_str(), bboxFragmentShader.c_str());
+	Lyra::shader_sp<Type> bvhShader = std::make_shared<Lyra::Shader<Type>>(bboxVertexShader.c_str(), bboxFragmentShader.c_str());
 
-	gph::ModelPointer<float> body = std::make_shared<gph::Model<float>>();
+	gph::ModelPointer<Type> body = std::make_shared<gph::Model<Type>>();
 	body->LoadModel(bodyPath);
 
 	///////////////////////////////BVH Build////////////////////////////////////////////////////
-	Lyra::objectBvh_sp<float> objBVH = std::make_shared<Lyra::ObjectBVH<float>>();
+	Lyra::objectBvh_sp<Type> objBVH = std::make_shared<Lyra::ObjectBVH<Type>>();
 	objBVH->Build(body, 1, bvhShader);
 	/*Lyra::uniformBvh_up<float> bvh = std::make_unique<Lyra::UniformBVH<float>>();
 
@@ -140,15 +143,15 @@ int main()
 	
 	///////////////////////////////cloth setting///////////////////////////////////////////////////
 
-	Lyra::cloth_up<float> cloth = std::make_unique<Lyra::Cloth<float>>();
+	Lyra::cloth_up<Type> cloth = std::make_unique<Lyra::Cloth<Type>>();
 
-	Lyra::clothPatch_sp<float> clothPatch0 = std::make_shared<Lyra::ClothPatch<float>>();
-	Lyra::clothPatch_sp<float> clothPatch1 = std::make_shared<Lyra::ClothPatch<float>>();
+	Lyra::clothPatch_sp<Type> clothPatch0 = std::make_shared<Lyra::ClothPatch<Type>>();
+	Lyra::clothPatch_sp<Type> clothPatch1 = std::make_shared<Lyra::ClothPatch<Type>>();
 
-	Lyra::ClothPatchParms<float> parms0;
-	Lyra::ClothPatchParms<float> parms1;
-	Lyra::SeamingInfo<float> seamingInfo1;
-	Lyra::ClothParms<float> clothParms;
+	Lyra::ClothPatchParms<Type> parms0;
+	Lyra::ClothPatchParms<Type> parms1;
+	Lyra::SeamingInfo<Type> seamingInfo1;
+	Lyra::ClothParms<Type> clothParms;
 
 	std::vector<uint32> stickPoints0 = { /*7,8,9*/ };
 	std::vector<uint32> stickPoints1 = { /*4,5,6*/ };
@@ -156,9 +159,9 @@ int main()
 	{
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
-		parms0.name = "Square_Front.obj";
+		parms0.name = "test.obj";
 		//parms0.name = "Square_Front.obj";
-		parms0.shader = Lyra::Shader<float>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
+		parms0.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
 		parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE;
 		//parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE;
@@ -206,7 +209,7 @@ int main()
 		//parms1.name = "UvObj_texture_back.obj";
 		parms1.name = "UvObj_Origin_Back_15.obj";
 		//parms1.name = "Square_Back.obj";
-		parms1.shader = Lyra::Shader<float>(modelVertexShaderPath.c_str(), model_1_FragmentShaderPath.c_str());
+		parms1.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), model_1_FragmentShaderPath.c_str());
 		//parms1.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
 		//parms1.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE;
 		parms1.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE;
@@ -338,44 +341,45 @@ int main()
 		seamingPair(2376,471),seamingPair(356,464),seamingPair(355,465),seamingPair(2368,467),
 		seamingPair(2370,501),seamingPair(176,514)};*/
 
-		seamingInfo1.seamingPairs = {
-			seamingPair(2550,2461),seamingPair(103,2277),seamingPair(359,506),
-		seamingPair(358,504),seamingPair(2366,502),seamingPair(2365,2385),seamingPair(2361,2381),
-		seamingPair(118,2379),seamingPair(116,162),seamingPair(2551,161),//左肩
+		//garment seaming information
+		//seamingInfo1.seamingPairs = {
+		//	seamingPair(2550,2461),seamingPair(103,2277),seamingPair(359,506),
+		//seamingPair(358,504),seamingPair(2366,502),seamingPair(2365,2385),seamingPair(2361,2381),
+		//seamingPair(118,2379),seamingPair(116,162),seamingPair(2551,161),//左肩
 
-		seamingPair(2552,245),seamingPair(176,244),seamingPair(2370,2313),
-		seamingPair(2368,2493),seamingPair(355,2491),seamingPair(356,2489),seamingPair(2376,2485),
-		seamingPair(2371,543),seamingPair(170,220),seamingPair(171,222),//右肩
+		//seamingPair(2552,245),seamingPair(176,244),seamingPair(2370,2313),
+		//seamingPair(2368,2493),seamingPair(355,2491),seamingPair(356,2489),seamingPair(2376,2485),
+		//seamingPair(2371,543),seamingPair(170,220),seamingPair(171,222),//右肩
 
-		seamingPair(201,309),seamingPair(203,307),seamingPair(2386,500),
-		seamingPair(362,493),seamingPair(361,494),seamingPair(366,2289),seamingPair(367,267),
-		seamingPair(2558,263),seamingPair(371,264),seamingPair(2330,491),//右侧
+		//seamingPair(201,309),seamingPair(203,307),seamingPair(2386,500),
+		//seamingPair(362,493),seamingPair(361,494),seamingPair(366,2289),seamingPair(367,267),
+		//seamingPair(2558,263),seamingPair(371,264),seamingPair(2330,491),//右侧
 
-		seamingPair(2328,489),seamingPair(374,487),seamingPair(2378,485),
-		seamingPair(2565,2341),seamingPair(2566,2340),seamingPair(2379,483),seamingPair(377,481),
-		seamingPair(379,477),seamingPair(381,478),seamingPair(2380,2378),//右侧
+		//seamingPair(2328,489),seamingPair(374,487),seamingPair(2378,485),
+		//seamingPair(2565,2341),seamingPair(2566,2340),seamingPair(2379,483),seamingPair(377,481),
+		//seamingPair(379,477),seamingPair(381,478),seamingPair(2380,2378),//右侧
 
-		seamingPair(2567,2375),seamingPair(2385,2373),seamingPair(382,476),
-		seamingPair(2559,473),seamingPair(386,469),seamingPair(388,470),seamingPair(390,2360),
-		seamingPair(2560,467),seamingPair(393,465),seamingPair(395,463),//右侧
+		//seamingPair(2567,2375),seamingPair(2385,2373),seamingPair(382,476),
+		//seamingPair(2559,473),seamingPair(386,469),seamingPair(388,470),seamingPair(390,2360),
+		//seamingPair(2560,467),seamingPair(393,465),seamingPair(395,463),//右侧
 
-		seamingPair(399,2438),seamingPair(398,2437),seamingPair(397,2432),
-		seamingPair(2512,459),seamingPair(2509,457),seamingPair(2506,455),seamingPair(2504,451),
-		seamingPair(2500,452),seamingPair(2499,380),	//右侧
+		//seamingPair(399,2438),seamingPair(398,2437),seamingPair(397,2432),
+		//seamingPair(2512,459),seamingPair(2509,457),seamingPair(2506,455),seamingPair(2504,451),
+		//seamingPair(2500,452),seamingPair(2499,380),	//右侧
 
-		seamingPair(2291,91),seamingPair(2292,89),seamingPair(354,542),
-		seamingPair(353,536),seamingPair(2298,538),seamingPair(2299,535),seamingPair(350,533),
-		seamingPair(349,532),seamingPair(2557,530),	//左侧
+		//seamingPair(2291,91),seamingPair(2292,89),seamingPair(354,542),
+		//seamingPair(353,536),seamingPair(2298,538),seamingPair(2299,535),seamingPair(350,533),
+		//seamingPair(349,532),seamingPair(2557,530),	//左侧
 
-		seamingPair(345,510),seamingPair(2338,508),seamingPair(2339,2298),
-		seamingPair(2332,2296),seamingPair(2333,2295),seamingPair(2345,2441),seamingPair(2342,2440),
-		seamingPair(2563,2445),seamingPair(342,512),seamingPair(2284,511),//左侧
+		//seamingPair(345,510),seamingPair(2338,508),seamingPair(2339,2298),
+		//seamingPair(2332,2296),seamingPair(2333,2295),seamingPair(2345,2441),seamingPair(2342,2440),
+		//seamingPair(2563,2445),seamingPair(342,512),seamingPair(2284,511),//左侧
 
-		seamingPair(2282,517),seamingPair(337,519),seamingPair(338,520),
-		seamingPair(2434,2290),seamingPair(2432,2292),seamingPair(2428,523),seamingPair(336,526),
-		seamingPair(334,527),seamingPair(2556,2386),seamingPair(331,376),
-		seamingPair(257,373),seamingPair(2555,374)//左侧
-		};
+		//seamingPair(2282,517),seamingPair(337,519),seamingPair(338,520),
+		//seamingPair(2434,2290),seamingPair(2432,2292),seamingPair(2428,523),seamingPair(336,526),
+		//seamingPair(334,527),seamingPair(2556,2386),seamingPair(331,376),
+		//seamingPair(257,373),seamingPair(2555,374)//左侧
+		//};
 		}
 		///raw mesh
 		{
@@ -391,8 +395,8 @@ int main()
 	{
 		clothParms.delta_t = 0.001f;
 		clothParms.frameRate = 25.f;
-		clothParms.gravity = Lyra::vec3<float>(0.f, -9.8f, 0.f);
-		clothParms.windParms.windVelocity = Lyra::vec3<float>(0.f, 0.f, 3.f);
+		clothParms.gravity = Lyra::vec3<Type>(0.f, -9.8f, 0.f);
+		clothParms.windParms.windVelocity = Lyra::vec3<Type>(0.f, 0.f, 3.f);
 		clothParms.windParms.windCod = 1.;
 		clothParms.windParms.windDensity = 0.5;
 		////废弃的seaming method
@@ -414,17 +418,17 @@ int main()
 		clothParms.enableGravity = true;
 		clothParms.enableWind = false;
 
-		clothParms.planeForceSwitch.enableStretchForce = true;
-		clothParms.planeForceSwitch.enableShearForce = true;
+		clothParms.planeForceSwitch.enableStretchForce = false;
+		clothParms.planeForceSwitch.enableShearForce = false;
 		//没有damping的话会导致拉伸的时候后面的点停不下来
-		clothParms.planeForceSwitch.enableDampingStretchForce = true;
+		clothParms.planeForceSwitch.enableDampingStretchForce = false;
 		clothParms.planeForceSwitch.enableDampingShearForce = false;
 
-		clothParms.spaceForceSwitch.enableBendingForce = true;
-		clothParms.spaceForceSwitch.enableDampingBendingForce = true;
+		clothParms.spaceForceSwitch.enableBendingForce = false;
+		clothParms.spaceForceSwitch.enableDampingBendingForce = false;
 
 		//for seaming
-		clothParms.shader = Lyra::Shader<float>(modelVertexShaderPath.c_str(), seamingFragmentShaderPath.c_str());
+		clothParms.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), seamingFragmentShaderPath.c_str());
 		clothParms.enableSeaming = false;
 
 		//collision detect

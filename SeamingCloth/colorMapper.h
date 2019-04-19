@@ -85,28 +85,28 @@ Lyra::ColorMapper<T>::ColorMapper()
 	{
 		switch (i)
 		{
-		case COLOR_RAINBOW: colormaps[i] = color_rainbow; break;
-		case COLOR_GRAYSCALE: colormaps[i] = color_grayscale; break;
-		case COLOR_AUTUMN: colormaps[i] = color_autumn; break;
-		case COLOR_BONE: colormaps[i] = color_bone; break;
-		case COLOR_COLORCUBE: colormaps[i] = color_colorcube; break;
-		case COLOR_COOL: colormaps[i] = color_cool; break;
-		case COLOR_COPPER: colormaps[i] = color_copper; break;
-		case COLOR_FLAG: colormaps[i] = color_flag; break;
-		case COLOR_HOT: colormaps[i] = color_hot; break;
-		case COLOR_HSV: colormaps[i] = color_hsv; break;
-		case COLOR_JET: colormaps[i] = color_jet; break;
-		case COLOR_LINES: colormaps[i] = color_lines; break;
-		case COLOR_PINK: colormaps[i] = color_pink; break;
-		case COLOR_PRISM: colormaps[i] = color_prism; break;
-		case COLOR_SPRING: colormaps[i] = color_spring; break;
-		case COLOR_SUMMER: colormaps[i] = color_summer; break;
-		case COLOR_WINTER: colormaps[i] = color_winter; break;
-		case COLOR__MAGMA: colormaps[i] = _magma_data; break;
-		case COLOR__PLASMA:colormaps[i] = _plasma_data; break;
-		case COLOR__INFERNO:colormaps[i] = _inferno_data; break;
-		case COLOR_VIRIDIS:colormaps[i] = _viridis_data; break;
-		case COLOR_CM:colormaps[i] = cm_data; break;
+		case COLOR_RAINBOW: colormaps[i] = (T*)color_rainbow; break;
+		case COLOR_GRAYSCALE: colormaps[i] = (T*)color_grayscale; break;
+		case COLOR_AUTUMN: colormaps[i] = (T*)color_autumn; break;
+		case COLOR_BONE: colormaps[i] = (T*)color_bone; break;
+		case COLOR_COLORCUBE: colormaps[i] = (T*)color_colorcube; break;
+		case COLOR_COOL: colormaps[i] = (T*)color_cool; break;
+		case COLOR_COPPER: colormaps[i] = (T*)color_copper; break;
+		case COLOR_FLAG: colormaps[i] = (T*)color_flag; break;
+		case COLOR_HOT: colormaps[i] = (T*)color_hot; break;
+		case COLOR_HSV: colormaps[i] = (T*)color_hsv; break;
+		case COLOR_JET: colormaps[i] = (T*)color_jet; break;
+		case COLOR_LINES: colormaps[i] = (T*)color_lines; break;
+		case COLOR_PINK: colormaps[i] = (T*)color_pink; break;
+		case COLOR_PRISM: colormaps[i] = (T*)color_prism; break;
+		case COLOR_SPRING: colormaps[i] = (T*)color_spring; break;
+		case COLOR_SUMMER: colormaps[i] = (T*)color_summer; break;
+		case COLOR_WINTER: colormaps[i] = (T*)color_winter; break;
+		case COLOR__MAGMA: colormaps[i] = (T*)_magma_data; break;
+		case COLOR__PLASMA:colormaps[i] = (T*)_plasma_data; break;
+		case COLOR__INFERNO:colormaps[i] = (T*)_inferno_data; break;
+		case COLOR_VIRIDIS:colormaps[i] = (T*)_viridis_data; break;
+		case COLOR_CM:colormaps[i] = (T*)cm_data; break;
 		}
 	}
 }
