@@ -25,7 +25,7 @@ namespace Lyra
 	public:
 		BBoxTriangle() = default;
 
-		virtual BBox<T> GetBBox(Shader<T>& shader, bool draw = false) = 0;
+		virtual BBox<T> GetBBox(shader_sp<T> shader, bool draw = false) = 0;
 		virtual vec3<T> GetCentroid() = 0;
 		//virtual bool IsIntersectWithBBox(BBox<T>& bBox) = 0;
 	};
@@ -40,7 +40,7 @@ namespace Lyra
 		BBoxObjTriangle() = default;
 		BBoxObjTriangle(VertexPointer<T>& vv1, VertexPointer<T>& vv2, VertexPointer<T>& vv3);
 
-		BBox<T> GetBBox(Shader<T>& shader, bool draw = false) override;
+		BBox<T> GetBBox(shader_sp<T> shader, bool draw = false) override;
 		vec3<T> GetCentroid() override;
 
 		VertexPointer<T> V0() { return v0; }
@@ -58,7 +58,7 @@ namespace Lyra
 		BBoxClothTriangle() = default;
 		BBoxClothTriangle(particle_pt<T> p0, particle_pt<T> p1, particle_pt<T> p2);
 
-		BBox<T> GetBBox(Shader<T>& shader, bool draw = false) override;
+		BBox<T> GetBBox(shader_sp<T> shader, bool draw = false) override;
 		vec3<T> GetCentroid() override;
 
 		bool IsIntersectWithBBox(BBox<T>& bBox);
@@ -81,7 +81,7 @@ Lyra::BBoxObjTriangle<T>::BBoxObjTriangle(VertexPointer<T>& vv0, VertexPointer<T
 }
 
 template<typename T>
-Lyra::BBox<T> Lyra::BBoxObjTriangle<T>::GetBBox(Shader<T>& shader, bool draw)
+Lyra::BBox<T> Lyra::BBoxObjTriangle<T>::GetBBox(shader_sp<T> shader, bool draw)
 {
 	//有个留下来的小问题，读入的时候是glm，这里用的都是eigen
 	vec3<T> vv0(v0->position.x, v0->position.y, v0->position.z);
@@ -114,7 +114,7 @@ Lyra::BBoxClothTriangle<T>::BBoxClothTriangle(particle_pt<T> pp0, particle_pt<T>
 }
 
 template<typename T>
-Lyra::BBox<T> Lyra::BBoxClothTriangle<T>::GetBBox(Shader<T>& shader, bool draw)
+Lyra::BBox<T> Lyra::BBoxClothTriangle<T>::GetBBox(shader_sp<T> shader, bool draw)
 {
 	vec3<T> minCornerCoordTmp, maxCornerCoordTmp;
 	minCornerCoordTmp = Min(p0->position, p1->position, p2->position);

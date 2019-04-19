@@ -1,6 +1,6 @@
 #pragma once
 #include"BVH.h"
-#include"ClothPatch.h"
+#include"TrianglePatch.h"
 #include"ObjectBVH.h"
 #include"CollisionResult.h"
 
@@ -11,6 +11,7 @@
 namespace Lyra
 {
 	template<typename T> class ClothBVH;
+	using namespace rootparity;
 }
 
 namespace Lyra
@@ -26,7 +27,8 @@ namespace Lyra
 		std::vector<BBoxClothTriangle<T>>& Fragments() { return fragments; }
 
 		/*Interface to Build Cloth BVH*/
-		void Build(clothPatch_sp<T>& patch, uint32 leafSize, Shader<T>& shader, bool draw = false);
+		void Build(std::vector<TrianglePatch<T>>& triangles, uint32 leafSize, shader_sp<T> shader=nullptr, bool draw = false);
+		void ReBuild(std::vector<TrianglePatch<T>>& triangles, uint32 leafSize, shader_sp<T> shader = nullptr, bool draw = false);
 
 		/*Interface to Debug*/
 		void DebugGlDraw(Camera<T>& camera) override;
@@ -44,9 +46,9 @@ namespace Lyra
 
 	private:
 		/*private function member to build BVH*/
-		void Init(clothPatch_sp<T>& patch);
-		void Create(uint32 leafSize, Shader<T>& shader, bool draw) override;
-		void DebugCreate(Shader<T>& shader, bool draw) override;
+		void Init(std::vector<TrianglePatch<T>>& triangles);
+		void Create(uint32 leafSize, shader_sp<T> shader, bool draw) override;
+		void DebugCreate(shader_sp<T> shader, bool draw) override;
 
 		/*private function member to detect BVH collision*/
 		void BVHCollisionDetect(std::vector<BVHFlatNode<T>>& bvh0, std::vector<BVHFlatNode<T>>& bvh1,
@@ -71,6 +73,10 @@ namespace Lyra
 		void Point2TriangleCollisionDetect(particle_pt<T> p, BBoxObjTriangle<T>& objTriangle,
 			CollisionResults_C2O<T>& collsionResult);
 
+		bool ExactEdge2EdgeCCD(ClothEdge<T>& clothEdge, ObjectEdge<T>& objectEdge);
+
+		bool ExactPoint2TriangleCCD(particle_pt<T> p, BBoxObjTriangle<T>& objTriangle);
+
 	private:
 		std::vector<BBoxClothTriangle<T>> fragments;
 		std::vector<BBox<T>> bBoxes;
@@ -85,16 +91,28 @@ namespace Lyra
 	template<typename T>
 	using clothBvh_pt = ClothBVH<T>*;
 }
+template<typename T>
+void Lyra::ClothBVH<T>::ReBuild(std::vector<TrianglePatch<T>>& triangles, uint32 leafSize, shader_sp<T> shader, bool draw)
+{
+	fragments.clear();
+	bBoxes.clear();
+	flatBvhTree.clear();
+	nNodes = 0;
+	nLeafs = 0;
+	this->leafSize = leafSize;
+
+	Build(triangles, leafSize, shader, draw);
+}
 
 template<typename T>
-void Lyra::ClothBVH<T>::Build(clothPatch_sp<T>& patch, uint32 leafSize, Shader<T>& shader, bool draw)
+void Lyra::ClothBVH<T>::Build(std::vector<TrianglePatch<T>>& triangles, uint32 leafSize, shader_sp<T> shader, bool draw)
 {
-	std::cout << "Cloth BVH Build Start.....\n";
-	//提取OBJ的triangle信息
-	Init(patch);
+	//std::cout << "Cloth BVH Build Start.....\n";
+	//提取Cloth的triangle信息
+	Init(triangles);
 	Create(leafSize, shader, draw);
 	//DebugCreate(shader, draw);
-	std::cout << "Cloth BVH Build End!!!\n";
+	//std::cout << "Cloth BVH Build End!!!\n";
 }
 
 template<typename T>
@@ -133,11 +151,9 @@ void Lyra::ClothBVH<T>::GlBind()
 }
 
 template<typename T>
-void Lyra::ClothBVH<T>::Init(clothPatch_sp<T>& patch)
+void Lyra::ClothBVH<T>::Init(std::vector<TrianglePatch<T>>& triangles)
 {
-	auto& trianglePatches = patch->TrianglePatches();
-
-	for (auto& tri : trianglePatches) {
+	for (auto& tri : triangles) {
 		fragments.push_back(BBoxClothTriangle<T>(tri.X0(), tri.X1(), tri.X2()));
 	}
 
@@ -145,13 +161,13 @@ void Lyra::ClothBVH<T>::Init(clothPatch_sp<T>& patch)
 }
 
 template<typename T>
-void Lyra::ClothBVH<T>::DebugCreate(Shader<T>& shader, bool draw)
+void Lyra::ClothBVH<T>::DebugCreate(shader_sp<T> shader, bool draw)
 {
 
 }
 
 template<typename T>
-void Lyra::ClothBVH<T>::Create(uint32 leafSize, Shader<T>& shader, bool draw)
+void Lyra::ClothBVH<T>::Create(uint32 leafSize, shader_sp<T> shader, bool draw)
 {
 	//top-down to build BVH
 	std::stack<BVHBuildEntry> todo;
@@ -242,104 +258,12 @@ void Lyra::ClothBVH<T>::Create(uint32 leafSize, Shader<T>& shader, bool draw)
 }
 
 template<typename T>
-bool Lyra::ClothBVH<T>::DescendStrategy(BVHCollisionPair<T>& collisionPair)
+void Lyra::ClothBVH<T>::CollisionWithObjBVH(ObjectBVH<T>& objectBVH, CollisionResults_C2O<T>& collisionResult)
 {
-	//优先遍历A树的策略
-	if (collisionPair.first.rightOffset == 0)
-		return false;
-	return true;
-}
+	auto objectFlatBvhTree = objectBVH.FlatBVHTree();
+	auto objectFragments = objectBVH.Fragments();
 
-template<typename T>
-void Lyra::ClothBVH<T>::Edge2EdgeCollisionDetect(ClothEdge<T>& clothEdge, ObjectEdge<T>& objectEdge,
-	CollisionResults_C2O<T>& collsionResult)
-{
-	//single point-triangle test
-}
-
-template<typename T>
-void Lyra::ClothBVH<T>::Point2TriangleCollisionDetect(particle_pt<T> p, BBoxObjTriangle<T>& objTriangle,
-	CollisionResults_C2O<T>& collsionResult)
-{
-	//single edge-edge pair test
-
-}
-
-template<typename T>
-void Lyra::ClothBVH<T>::Edge2EdgeCollisionDetect(BBoxClothTriangle<T>& clothTriangle, BBoxObjTriangle<T>& objTriangle,
-	CollisionResults_C2O<T>& collsionResult)
-{
-	//edge-edge collision test
-	particle_pt<T> p0 = clothTriangle.P0();
-	particle_pt<T> p1 = clothTriangle.P1();
-	particle_pt<T> p2 = clothTriangle.P2();
-
-	VertexPointer<T> v0 = objTriangle.V0();
-	VertexPointer<T> v1 = objTriangle.V1();
-	VertexPointer<T> v2 = objTriangle.V2();
-
-	std::vector<ClothEdge<T>> clothEdges;
-	std::vector<ObjectEdge<T>> objectEdges;
-
-	clothEdges.push_back(ClothEdge<T>(p0, p1));
-	clothEdges.push_back(ClothEdge<T>(p1, p2));
-	clothEdges.push_back(ClothEdge<T>(p2, p1));
-
-	objectEdges.push_back(ObjectEdge<T>(v0, v1));
-	objectEdges.push_back(ObjectEdge<T>(v1, v2));
-	objectEdges.push_back(ObjectEdge<T>(v2, v1));
-
-	for (uint32 i = 0; i < clothEdges.size(); i++) {
-		for (uint32 j = 0; j < objectEdges.size(); j++) {
-			Edge2EdgeCollisionDetect(clothEdges[i], objectEdges[j], collsionResult);
-		}
-	}
-}
-
-template<typename T>
-void Lyra::ClothBVH<T>::Point2TriangleCollisionDetect(BBoxClothTriangle<T>& clothTriangle, BBoxObjTriangle<T>& objTriangle,
-	CollisionResults_C2O<T>& collsionResult)
-{
-	//point-triangle collision test
-	particle_pt<T> p0 = clothTriangle.P0();
-	particle_pt<T> p1 = clothTriangle.P1();
-	particle_pt<T> p2 = clothTriangle.P2();
-
-	//solve a tri-equation to decide whether point intesect with triangle
-	Point2TriangleCollisionDetect(p0, objTriangle, collsionResult);
-	Point2TriangleCollisionDetect(p1, objTriangle, collsionResult);
-	Point2TriangleCollisionDetect(p2, objTriangle, collsionResult);
-}
-
-template<typename T>
-void Lyra::ClothBVH<T>::CollidePrimitives(BVHCollisionPair<T>& collisionPair,
-	std::vector<BBoxClothTriangle<T>>& fragment0, std::vector<BBoxObjTriangle<T>>& fragment1,
-	CollisionResults_C2O<T>& collsionResult)
-{
-	//对triangle碰撞分成vertex-vertex、vertex-triangle
-	//对来检查并返回collisionDetect的信息到collsionResult
-	
-	std::vector<BBoxClothTriangle<T>> clothTriangles;
-	std::vector<BBoxObjTriangle<T>> objectTriangles;
-
-	uint32 startPos0 = collisionPair.first.start;
-	uint32 startPos1 = collisionPair.second.start;
-
-	//提取可能碰撞的cloth三角形
-	for (uint32 i = 0; i < collisionPair.first.nPrims; i++) {
-		clothTriangles.push_back(fragment0[startPos0 + i]);
-	}
-	//提取可能碰撞的object三角形
-	for (uint32 i = 0; i < collisionPair.second.nPrims; i++) {
-		objectTriangles.push_back(fragment1[startPos1 + i]);
-	}
-
-	for (uint32 i = 0; i < clothTriangles.size(); i++) {
-		for (uint32 j = 0; j < objectTriangles.size(); j++) {
-			Edge2EdgeCollisionDetect(clothTriangles[i], objectTriangles[j], collsionResult);
-			Point2TriangleCollisionDetect(clothTriangles[i], objectTriangles[j], collsionResult);
-		}
-	}
+	BVHCollisionDetect(flatBvhTree, objectFlatBvhTree, fragments, objectFragments, collisionResult);
 }
 
 template<typename T>
@@ -389,12 +313,173 @@ void Lyra::ClothBVH<T>::BVHCollisionDetect(
 }
 
 template<typename T>
-void Lyra::ClothBVH<T>::CollisionWithObjBVH(ObjectBVH<T>& objectBVH, CollisionResults_C2O<T>& collisionResult)
+bool Lyra::ClothBVH<T>::DescendStrategy(BVHCollisionPair<T>& collisionPair)
 {
-	auto objectFlatBvhTree = objectBVH.FlatBVHTree();
-	auto objectFragments = objectBVH.Fragments();
+	//优先遍历A树的策略
+	if (collisionPair.first.rightOffset == 0)
+		return false;
+	return true;
+}
 
-	BVHCollisionDetect(flatBvhTree, objectFlatBvhTree, fragments, objectFragments, collisionResult);
+template<typename T>
+void Lyra::ClothBVH<T>::CollidePrimitives(BVHCollisionPair<T>& collisionPair,
+	std::vector<BBoxClothTriangle<T>>& fragment0, std::vector<BBoxObjTriangle<T>>& fragment1,
+	CollisionResults_C2O<T>& collsionResult)
+{
+	//对triangle碰撞分成vertex-vertex、vertex-triangle
+	//对来检查并返回collisionDetect的信息到collsionResult
+	
+	std::vector<BBoxClothTriangle<T>> clothTriangles;
+	std::vector<BBoxObjTriangle<T>> objectTriangles;
+
+	uint32 startPos0 = collisionPair.first.start;
+	uint32 startPos1 = collisionPair.second.start;
+
+	//提取可能碰撞的cloth三角形
+	for (uint32 i = 0; i < collisionPair.first.nPrims; i++) {
+		clothTriangles.push_back(fragment0[startPos0 + i]);
+	}
+	//提取可能碰撞的object三角形
+	for (uint32 i = 0; i < collisionPair.second.nPrims; i++) {
+		objectTriangles.push_back(fragment1[startPos1 + i]);
+	}
+
+	for (uint32 i = 0; i < clothTriangles.size(); i++) {
+		for (uint32 j = 0; j < objectTriangles.size(); j++) {
+			Edge2EdgeCollisionDetect(clothTriangles[i], objectTriangles[j], collsionResult);
+			Point2TriangleCollisionDetect(clothTriangles[i], objectTriangles[j], collsionResult);
+		}
+	}
+}
+
+template<typename T>
+void Lyra::ClothBVH<T>::Edge2EdgeCollisionDetect(BBoxClothTriangle<T>& clothTriangle, BBoxObjTriangle<T>& objTriangle,
+	CollisionResults_C2O<T>& collsionResult)
+{
+	//edge-edge collision test
+	particle_pt<T> p0 = clothTriangle.P0();
+	particle_pt<T> p1 = clothTriangle.P1();
+	particle_pt<T> p2 = clothTriangle.P2();
+
+	VertexPointer<T> v0 = objTriangle.V0();
+	VertexPointer<T> v1 = objTriangle.V1();
+	VertexPointer<T> v2 = objTriangle.V2();
+
+	std::vector<ClothEdge<T>> clothEdges;
+	std::vector<ObjectEdge<T>> objectEdges;
+
+	clothEdges.push_back(ClothEdge<T>(p0, p1));
+	clothEdges.push_back(ClothEdge<T>(p1, p2));
+	clothEdges.push_back(ClothEdge<T>(p2, p1));
+
+	objectEdges.push_back(ObjectEdge<T>(v0, v1));
+	objectEdges.push_back(ObjectEdge<T>(v1, v2));
+	objectEdges.push_back(ObjectEdge<T>(v2, v1));
+
+	for (uint32 i = 0; i < clothEdges.size(); i++) {
+		for (uint32 j = 0; j < objectEdges.size(); j++) {
+			Edge2EdgeCollisionDetect(clothEdges[i], objectEdges[j], collsionResult);
+		}
+	}
+}
+
+template<typename T>
+void Lyra::ClothBVH<T>::Point2TriangleCollisionDetect(BBoxClothTriangle<T>& clothTriangle, BBoxObjTriangle<T>& objTriangle,
+	CollisionResults_C2O<T>& collsionResult)
+{
+	//point-triangle collision test
+	particle_pt<T> p0 = clothTriangle.P0();
+	particle_pt<T> p1 = clothTriangle.P1();
+	particle_pt<T> p2 = clothTriangle.P2();
+
+	//solve a tri-equation to decide whether point intesect with triangle
+	Point2TriangleCollisionDetect(p0, objTriangle, collsionResult);
+	Point2TriangleCollisionDetect(p1, objTriangle, collsionResult);
+	Point2TriangleCollisionDetect(p2, objTriangle, collsionResult);
+}
+
+template<typename T>
+void Lyra::ClothBVH<T>::Edge2EdgeCollisionDetect(ClothEdge<T>& clothEdge, ObjectEdge<T>& objectEdge,
+	CollisionResults_C2O<T>& collsionResult)
+{
+	if (ExactEdge2EdgeCCD(clothEdge, objectEdge)) {
+		Edge2Edge_C2O<T> edge2Edge;
+		edge2Edge.clothEdge0 = clothEdge;
+		edge2Edge.objectEdge0 = objectEdge;
+		collsionResult.edge2Edge.push_back(edge2Edge);
+	}
+}
+
+template<typename T>
+void Lyra::ClothBVH<T>::Point2TriangleCollisionDetect(particle_pt<T> p, BBoxObjTriangle<T>& objTriangle,
+	CollisionResults_C2O<T>& collsionResult)
+{
+	//single point-triangle pair test
+	if (ExactPoint2TriangleCCD(p, objTriangle)) {
+		Vertex2Triangle_C2O<T> vertex2Triangle;
+		vertex2Triangle.v0 = p;
+
+		vertex2Triangle.t0 = objTriangle.V0();
+		vertex2Triangle.t1 = objTriangle.V1();
+		vertex2Triangle.t2 = objTriangle.V2();
+
+		collsionResult.vertex2Triangle.push_back(vertex2Triangle);
+	}
+
+}
+
+template<typename T>
+bool Lyra::ClothBVH<T>::ExactEdge2EdgeCCD(ClothEdge<T>& clothEdge, ObjectEdge<T>& objectEdge)
+{
+	//single point-triangle test
+	particle_pt<T> p0 = clothEdge.p0;
+	particle_pt<T> p1 = clothEdge.p1;
+
+	VertexPointer<T>& v0 = objectEdge.p0;
+	VertexPointer<T>& v1 = objectEdge.p1;
+
+	//cloth edge顶点的新旧位置
+	Vec3d p0Old(p0->pseudoPosition(0), p0->pseudoPosition(1), p0->pseudoPosition(2));
+	Vec3d p0New(p0->position(0), p0->position(1), p0->position(2));
+
+	Vec3d p1Old(p1->pseudoPosition(0), p1->pseudoPosition(1), p1->pseudoPosition(2));
+	Vec3d p1New(p1->position(0), p1->position(1), p1->position(2));
+
+	//object edge顶点的新旧位置一致
+	Vec3d v0Old(v0->position.x, v0->position.y, v0->position.z);
+	Vec3d v0New(v0->position.x, v0->position.y, v0->position.z);
+
+	Vec3d v1Old(v1->position.x, v1->position.y, v1->position.z);
+	Vec3d v1New(v1->position.x, v1->position.y, v1->position.z);
+
+	RootParityCollisionTest edge2EdgeColllsionTest(p0Old, p1Old, v0Old, v1Old, p0New, p1New, v0New, v1New, true);
+
+	return edge2EdgeColllsionTest.run_test();
+
+}
+
+template<typename T>
+bool Lyra::ClothBVH<T>::ExactPoint2TriangleCCD(particle_pt<T> p, BBoxObjTriangle<T>& objTriangle)
+{
+	VertexPointer<T> t0 = objTriangle.V0();
+	VertexPointer<T> t1 = objTriangle.V0();
+	VertexPointer<T> t2 = objTriangle.V0();
+
+	//p是cloth上的点，triangle是object上的
+	Vec3d pOld(p->pseudoPosition(0), p->pseudoPosition(1), p->pseudoPosition(2));
+	Vec3d pNew(p->position(0), p->position(1), p->position(2));
+
+	//triangle's vertex old position and new one
+	Vec3d t0Old(t0->position.x, t0->position.y, t0->position.z);
+	Vec3d t0New(t0->position.x, t0->position.y, t0->position.z);
+	Vec3d t1Old(t1->position.x, t1->position.y, t1->position.z);
+	Vec3d t1New(t1->position.x, t1->position.y, t1->position.z);
+	Vec3d t2Old(t2->position.x, t2->position.y, t2->position.z);
+	Vec3d t2New(t2->position.x, t2->position.y, t2->position.z);
+
+	RootParityCollisionTest edge2EdgeColllsionTest(pOld, t0Old, t1Old, t2Old, pNew, t0New, t1New, t2New, false);
+
+	return edge2EdgeColllsionTest.run_test();
 }
 
 template<typename T>

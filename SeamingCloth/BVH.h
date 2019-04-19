@@ -64,8 +64,8 @@ namespace Lyra
 		virtual void GlBind() = 0;
 
 	private:
-		virtual void DebugCreate(Shader<T>& shader, bool draw) = 0;
+		virtual void DebugCreate(shader_sp<T> shader, bool draw) = 0;
 
-		virtual void Create(uint32 leafSize, Shader<T>& shader, bool draw) = 0;
+		virtual void Create(uint32 leafSize, shader_sp<T> shader, bool draw) = 0;
 	};
 }

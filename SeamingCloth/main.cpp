@@ -120,14 +120,15 @@ int main()
 
 	//////////////////////////////body setting///////////////////////////////////////////////////
 	gph::Shader bodyShader(bodyVertexShaderPath.c_str(), bodyFragmentShaderPath.c_str());
-	Lyra::Shader<float> bvhShader = Lyra::Shader<float>(bboxVertexShader.c_str(), bboxFragmentShader.c_str());
+	//Lyra::Shader<float> bvhShader = Lyra::Shader<float>(bboxVertexShader.c_str(), bboxFragmentShader.c_str());
+	Lyra::shader_sp<float> bvhShader = std::make_shared<Lyra::Shader<float>>(bboxVertexShader.c_str(), bboxFragmentShader.c_str());
 
 	gph::ModelPointer<float> body = std::make_shared<gph::Model<float>>();
 	body->LoadModel(bodyPath);
 
 	///////////////////////////////BVH Build////////////////////////////////////////////////////
-	/*Lyra::objectBvh_up<float> objBVH= std::make_unique<Lyra::ObjectBVH<float>>();
-	objBVH->Build(body, 1, bvhShader, false);*/
+	Lyra::objectBvh_sp<float> objBVH = std::make_shared<Lyra::ObjectBVH<float>>();
+	objBVH->Build(body, 1, bvhShader);
 	/*Lyra::uniformBvh_up<float> bvh = std::make_unique<Lyra::UniformBVH<float>>();
 
 	Lyra::vec3<float> center(0.f, -65.f, 5.f);
@@ -155,12 +156,12 @@ int main()
 	{
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
-		parms0.name = "UvObj_Origin.obj";
+		parms0.name = "Square_Front.obj";
 		//parms0.name = "Square_Front.obj";
 		parms0.shader = Lyra::Shader<float>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
-		parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
-		//parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE;
-		parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE;
+		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
+		parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE;
+		//parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE;
 		parms0.stickPoints.reset(&(stickPoints0));
 		///scale小了会导致plane force变小，结果系统更稳定，需要确定一个合适的scale
 		///这个scale理论上是非线性的，现在用线性的替代，必然导致force计算出现问题[19-04-11]
@@ -170,11 +171,11 @@ int main()
 		///刚性强会使solver崩掉，刚性不够则没法缝合，
 		///@(todo_1)为什么刚性弱无法缝合？？？
 		///@(do_1)问题解决，可以缝合，积分方法问题
-		parms0.stretchingFactor = 10000.f;
+		parms0.stretchingFactor = 5000.f;
 		parms0.shearingFactor = 500.f;
 		parms0.bendingFactor = 60.237942e-6;
 		///damping stretch引起的问题，可能是solver不能解刚性过大的系统
-		parms0.dampingStretchFactor = 0.1f;
+		parms0.dampingStretchFactor = 0.05f;
 		parms0.dampingShearFactor = 0.1f;
 		parms0.dampingBendingFactor = 0.0001f;
 		parms0.stretchScaleUDir = 1.f;
@@ -206,7 +207,7 @@ int main()
 		parms1.name = "UvObj_Origin_Back_15.obj";
 		//parms1.name = "Square_Back.obj";
 		parms1.shader = Lyra::Shader<float>(modelVertexShaderPath.c_str(), model_1_FragmentShaderPath.c_str());
-		parms1.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
+		//parms1.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
 		//parms1.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE;
 		parms1.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE;
 		parms1.stickPoints.reset(&(stickPoints1));
@@ -424,20 +425,24 @@ int main()
 
 		//for seaming
 		clothParms.shader = Lyra::Shader<float>(modelVertexShaderPath.c_str(), seamingFragmentShaderPath.c_str());
+		clothParms.enableSeaming = false;
+
+		//collision detect
+		clothParms.enableCollisionDetect = true;
 	}
 
 	clothPatch0->LoadPatch(parms0);
 	clothPatch1->LoadPatch(parms1);
 
 	cloth->AddPatch(clothPatch0);
-	cloth->AddPatch(clothPatch1);
+	//cloth->AddPatch(clothPatch1);
 	cloth->AddSeamingInfo(seamingInfo1);
 	cloth->Integrate(clothParms);
 
-	Lyra::ClothBVH<float> clothBvh;
+	/*Lyra::ClothBVH<float> clothBvh;
 	clothBvh.Build(clothPatch0, 1, bvhShader);
 
-	clothBvh.GlBind();
+	clothBvh.GlBind();*/
 
 	cloth->GlBind();
 
@@ -460,7 +465,8 @@ int main()
 		projectionMat = camera.GetProjectMatrix();
 
 		cloth->GlUpdate();
-		//cloth->Simulate();
+		cloth->Simulate(objBVH);
+		//cloth->DebugSimulate(bvhShader);
 		
 		cloth->Rendering(camera, lineMode);
 
@@ -472,7 +478,7 @@ int main()
 		//bvh->DrawSubBBoxs(camera);
 		//objBVH->GlDraw(camera);
 
-		clothBvh.GlDraw(camera);
+		//clothBvh.GlDraw(camera);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

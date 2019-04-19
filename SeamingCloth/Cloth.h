@@ -5,6 +5,7 @@
 #include"SeamingInfo.h"
 #include"ForceSwitch.h"
 #include"Shader.h"
+#include"CollisionResult.h"
 
 #include<GraphicHelper\Camera.h>
 
@@ -56,6 +57,8 @@ struct Lyra::ClothParms
 
 	bool enableWind;
 	bool enableGravity;
+	bool enableSeaming;
+	bool enableCollisionDetect;
 
 	//for seaming
 	Shader<T> shader;
@@ -73,11 +76,13 @@ struct Lyra::ClothParms
 
 		enableWind = parms.enableWind;
 		enableGravity = parms.enableGravity;
+		enableCollisionDetect = parms.enableCollisionDetect;
 
 		planeForceSwitch = parms.planeForceSwitch;
 		spaceForceSwitch = parms.spaceForceSwitch;
 
 		seamingParms = parms.seamingParms;
+		enableSeaming = parms.enableSeaming;
 
 		shader = parms.shader;
 
@@ -114,37 +119,32 @@ namespace Lyra
 		uint32_sp VBO;
 
 	public:
+		/*Init Functions*/
 		bool AddPatch(clothPatch_sp<T> &patch);
 		bool AddPatches(std::vector<clothPatch_sp<T>> &patches);
 		bool AddSeamingInfo(SeamingInfo<T> &info);
 		bool AddMultiSeamingInfo(std::vector<SeamingInfo<T>> &seamingInfo);
-
+		bool Integrate(ClothParms<T>& parms);
+		/*Simulation Functions*/
 		void ApplyWind();
-
 		void ApplyGravity();
-
 		void ApplyPlaneForce();
-
 		void ApplySpaceForce();
-
 		void ApplyExternalForce();
-
 		void ApplyInternalForce();
-
-		void Simulate();
-
-		bool Integrate(ClothParms<T> &parms);
-
+		void Simulate(Lyra::objectBvh_sp<T> objectBvh);
 		void Seaming();
-
+		/*Rendering Functions*/
 		void Rendering(gph::Camera<T> &camera, bool lineMode);
-
 		void GlBind();
-
 		void GlUpdate();
+		/*Debug Functions*/
+		void DebugSimulate(shader_sp<T> shader);
+		void SimulationInfo();
 
 	private:
 		void UpdatePosition();
+		void UpdatePesudoPosition();
 		bool CheckSeamingCondition();
 		void UpdatePatches();
 		void UpdateSeamingPosition();
@@ -152,6 +152,15 @@ namespace Lyra
 		void GlBindSeaming();
 		void GlUpdateSeaming();
 		void GlRenderSeaming(gph::Camera<T> &camera);
+
+		void BuildPatchBVH(uint32 leafSize = 1, shader_sp<T> shader = nullptr, bool draw = false);
+
+		void GramentSimulate();
+		void PatchSimulate(Lyra::objectBvh_sp<T> objectBvh);
+
+		void CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult);
+		void CollisionDetectWithOtherCloth();
+		void CollisionDetectWithSelf();
 	};
 
 	template<typename T>
@@ -292,8 +301,34 @@ bool Lyra::Cloth<T>::Integrate(ClothParms<T> &parms)
 		patch->Create(particles);
 	}
 
+	//Build BVH
+	BuildPatchBVH();
+
+	//Output simulation information
+	SimulationInfo();
+
 	//之后就可以进行模拟了
 	return true;
+}
+
+template<typename T>
+void Lyra::Cloth<T>::SimulationInfo()
+{
+	std::cout << "######################Cloth Simulation Info######################\n\n";
+	std::cout << "patch number: " << patches.size() << "\n";
+	std::cout << "Simulation Category: ";
+	if(parms.enableSeaming)
+		std::cout << "GRAMENT\n";
+	else
+		std::cout << "PATCH\n";
+}
+
+template<typename T>
+void Lyra::Cloth<T>::BuildPatchBVH(uint32 leafSize,shader_sp<T> shader,bool draw)
+{
+	for (auto& patch : patches) {
+		patch->BuildBVH(leafSize, shader, draw);
+	}
 }
 
 template<typename T>
@@ -378,8 +413,15 @@ void Lyra::Cloth<T>::UpdateSeamingPosition()
 }
 
 template<typename T>
-void Lyra::Cloth<T>::Simulate()
-{	
+void Lyra::Cloth<T>::DebugSimulate(shader_sp<T> shader)
+{
+	BuildPatchBVH(1, shader, true);
+}
+
+template<typename T>
+void Lyra::Cloth<T>::GramentSimulate()
+{
+	//BuildPatchBVH(1);
 	ApplyInternalForce();
 	if (isSeaming)
 		ApplyExternalForce();
@@ -418,6 +460,80 @@ void Lyra::Cloth<T>::Simulate()
 
 	elapseTime += parms.delta_t;
 	//printf_s("%f\n", elapseTime);
+}
+
+template<typename T>
+void Lyra::Cloth<T>::CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh,CollisionResults_C2O<T>& collsionResult)
+{
+	for (auto& patch : patches) {
+		patch->CollisionDetectWithRigidbody(objectBvh, collsionResult);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::CollisionDetectWithOtherCloth()
+{
+
+}
+
+template<typename T>
+void Lyra::Cloth<T>::CollisionDetectWithSelf()
+{
+
+}
+
+template<typename T>
+void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
+{
+	BuildPatchBVH(1);
+	ApplyInternalForce();
+	ApplyExternalForce();
+
+	CollisionResults_C2O<T> collisionResults_C2O;
+	CollisionResults_C2C<T> collisionResults_C2C;
+
+	if (parms.enableCollisionDetect) {
+		UpdatePesudoPosition();
+		CollisionDetectWithRigidbody(objectBvh, collisionResults_C2O);
+
+		printf_s("%d %d\n", collisionResults_C2O.edge2Edge.size(), 
+			collisionResults_C2O.vertex2Triangle.size());
+	}
+		UpdatePosition();
+	elapseTime += parms.delta_t;
+}
+
+template<typename T>
+void Lyra::Cloth<T>::UpdatePesudoPosition()
+{
+	for (auto& p : particles) {
+		p.UpdatePseudoPosition(parms.delta_t);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::Simulate(Lyra::objectBvh_sp<T> objectBvh)
+{	
+	if (parms.enableSeaming)
+	{
+		//整件缝合衣物的模拟
+		if (patches.size() > 1)
+			GramentSimulate();
+		else if (patches.size() < 2) {
+			std::cerr << "Number of patch is less than 2\n";
+			exit(0);
+		}
+	}
+	else
+	{
+		//单件布块的模拟,不接受多块不相关布块的模拟
+		if (patches.size() != 1) {
+			std::cerr << "Number of patch is less than 1,Simulator can't go on\n";
+			exit(0);
+		}
+
+		PatchSimulate(objectBvh);
+	}
 }
 
 template<typename T>
@@ -593,7 +709,7 @@ void Lyra::Cloth<T>::UpdatePatches()
 		}
 
 		//system("pause");
-		patch2->RegeneratePatchInfo(particles);
+		patch2->ReGeneratePatchInfo(particles);
 	}
 
 	printf("seaming done\n");
@@ -624,7 +740,7 @@ void Lyra::Cloth<T>::Rendering(gph::Camera<T> &camera, bool lineMode)
 		patch->Rendering(particles, camera, lineMode);
 	}
 
-	if (!isSeaming)
+	if (!isSeaming && parms.enableSeaming)
 		GlRenderSeaming(camera);
 }
 
@@ -658,7 +774,8 @@ void Lyra::Cloth<T>::GlBind()
 		patch->GlBind();
 	}
 
-	GlBindSeaming();
+	if(parms.enableSeaming)
+		GlBindSeaming();
 }
 
 template<typename T>
@@ -679,7 +796,7 @@ void Lyra::Cloth<T>::GlUpdate()
 		patch->GlUpdate();
 	}
 
-	if (!isSeaming)
+	if (!isSeaming && parms.enableSeaming)
 		GlUpdateSeaming();
 }
 

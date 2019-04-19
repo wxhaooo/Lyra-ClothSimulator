@@ -53,10 +53,10 @@ TEST(BBoxClass, FoundationData)
 	const vec3<float> minCornerCoord2(6, 6, 6);
 	const vec3<float> maxCornerCoord2(16, 16, 16);
 
-	Shader<float> shader(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
+	shader_sp<float> shader = std::make_shared<Lyra::Shader<float>>(vertexShaderPath.c_str(), fragmentShaderPath.c_str());
+	
 	BBox<float> bbox1(minCornerCoord1, maxCornerCoord1, shader, false);
 	BBox<float> bbox2(minCornerCoord2, maxCornerCoord2, shader, true);
-
 	
 	glm::vec3 x1(u(e), u(e), u(e));
 	glm::vec3 x2(u(e), u(e), u(e));

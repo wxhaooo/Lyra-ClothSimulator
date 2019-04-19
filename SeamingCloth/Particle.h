@@ -29,6 +29,7 @@ namespace Lyra
 		vec3<T> velocity;
 		vec3<T> acceleration;
 		vec3<T> preAccleration;
+		vec3<T> pseudoVelocity;
 
 		Particle() = default;
 		~Particle() = default;
@@ -36,6 +37,8 @@ namespace Lyra
 		Particle(vec2<T> &planeCoord, vec3<T> &wordPos, T mass = 1.0f, bool mv = true);
 
 		void ApplyForce(vec3<T> force);
+
+		void UpdatePseudoPosition(T delta_t);
 
 		void UpdatePosition(T delta_t);
 
@@ -99,4 +102,16 @@ void Lyra::Particle<T>::UpdatePosition(T delta_t)
 	//这里估计的是t+\delta t时刻的速度
 	velocity = (position - prePosition)/delta_t;
 	acceleration.setZero();
+}
+
+template<typename T>
+void Lyra::Particle<T>::UpdatePseudoPosition(T delta_t)
+{
+	//估计下一时刻的位置和速度用于碰撞响应
+	pseudoPosition.setZero();
+	pseudoVelocity.setZero();
+
+	T delta_t2 = delta_t * delta_t;
+	pseudoPosition = position + position - prePosition + acceleration * delta_t2;
+	pseudoVelocity = (pseudoPosition - position) / delta_t;
 }

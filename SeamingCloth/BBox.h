@@ -26,9 +26,9 @@ namespace Lyra
 	{
 	public:
 		BBox() = default;
-		BBox(vec3<T> &center, vec3<T> &halfExtent, Shader<T> &shader, bool draw = false);
-		BBox(const vec3<T> &minCornerCoord, const vec3<T> &maxCornerCoord, Shader<T> &shader, bool draw = false);
-		BBox(const vec3<T>& p, Shader<T>& shader, bool draw = false);
+		BBox(vec3<T> &center, vec3<T> &halfExtent, shader_sp<T> shader, bool draw = false);
+		BBox(const vec3<T> &minCornerCoord, const vec3<T> &maxCornerCoord, shader_sp<T> shader, bool draw = false);
+		BBox(const vec3<T>& p, shader_sp<T> shader, bool draw = false);
 
 		//////////////////////////////Functions to build BVH//////////////////////////////////////
 		void ExpandToInclude(const vec3<T>& p);
@@ -50,8 +50,8 @@ namespace Lyra
 
 	private:
 		///////////////////////////Init BBox//////////////////////////////////////////////////////
-		void Init(const vec3<T>& minCornerCoord, const vec3<T>& maxCornerCoord, Shader<T>& shader, bool draw = false);
-		void Init(vec3<T>& center, vec3<T>& halfExtent, Shader<T>& shader, bool draw = false);
+		void Init(const vec3<T>& minCornerCoord, const vec3<T>& maxCornerCoord, shader_sp<T> shader, bool draw = false);
+		void Init(vec3<T>& center, vec3<T>& halfExtent, shader_sp<T> shader, bool draw = false);
 	public:
 		vec3<T> center;
 		vec3<T> halfExtent;
@@ -59,7 +59,8 @@ namespace Lyra
 		vec3<T> minCorner;
 		vec3<T> maxCorner;
 
-		Shader<T> shader;
+		//Shader<T> shader;
+		shader_sp<T> shader;
 	private:
 		uint32_sp VAO;
 		uint32_sp VBO;
@@ -81,19 +82,19 @@ namespace Lyra
 }
 
 template<typename T>
-Lyra::BBox<T>::BBox(vec3<T> &center, vec3<T> &halfExtent, Shader<T> &shader, bool draw)
+Lyra::BBox<T>::BBox(vec3<T> &center, vec3<T> &halfExtent, shader_sp<T> shader, bool draw)
 {
 	Init(center, halfExtent, shader, draw);
 }
 
 template<typename T>
-Lyra::BBox<T>::BBox(const vec3<T>& minCornerCoord, const vec3<T>& maxCornerCoord, Shader<T>& shader, bool draw)
+Lyra::BBox<T>::BBox(const vec3<T>& minCornerCoord, const vec3<T>& maxCornerCoord, shader_sp<T> shader, bool draw)
 {
 	Init(minCornerCoord, maxCornerCoord, shader, draw);
 }
 
 template<typename T>
-Lyra::BBox<T>::BBox(const vec3<T>& p, Shader<T>& shader, bool draw)
+Lyra::BBox<T>::BBox(const vec3<T>& p, shader_sp<T> shader, bool draw)
 {
 	Init(p, p, shader, draw);
 }
@@ -159,7 +160,7 @@ bool Lyra::BBox<T>::IsPointInBox(vec3<T> &point)
 }
 
 template<typename T>
-void Lyra::BBox<T>::Init(const vec3<T>& minCornerCoord, const vec3<T>& maxCornerCoord, Shader<T>& shader, bool draw)
+void Lyra::BBox<T>::Init(const vec3<T>& minCornerCoord, const vec3<T>& maxCornerCoord, shader_sp<T> shader, bool draw)
 {
 	this->draw = draw;
 	this->shader = shader;
@@ -178,7 +179,7 @@ void Lyra::BBox<T>::Init(const vec3<T>& minCornerCoord, const vec3<T>& maxCorner
 }
 
 template<typename T>
-void Lyra::BBox<T>::Init(vec3<T> &center, vec3<T> &halfExtent, Shader<T> &shader, bool draw)
+void Lyra::BBox<T>::Init(vec3<T> &center, vec3<T> &halfExtent, shader_sp<T> shader, bool draw)
 {
 	this->draw = draw;
 	this->center = center;
@@ -287,9 +288,9 @@ void Lyra::BBox<T>::GlDraw(gph::Camera<T> &camera)
 {
 	glm::mat4 MVP = camera.GetMVPMatrix();
 	
-	shader.use();
-	shader.setMat4("MVP", MVP);
-	shader.setVec3("RGB", RGB);
+	shader->use();
+	shader->setMat4("MVP", MVP);
+	shader->setVec3("RGB", RGB);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 

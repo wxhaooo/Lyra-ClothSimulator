@@ -59,7 +59,7 @@ namespace Lyra
 		T lengthRangeMax;
 		//stick points
 		vector_sp<uint32> stickPoints;
-
+		//patch的模式可以不设置，没有影响
 		ClothPatchMode patchMode;
 
 		ClothPatchInitState initState;

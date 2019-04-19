@@ -19,7 +19,7 @@ namespace Lyra
 		std::vector<BVHFlatNode<T>>& FlatBVHTree() { return flatBvhTree; }
 		std::vector<BBoxObjTriangle<T>>& Fragments() { return fragments; }
 
-		void Build(ModelPointer<T>& model, uint32 leafSize, Shader<T>& shader, bool draw = false);
+		void Build(ModelPointer<T>& model, uint32 leafSize, shader_sp<T> shader = nullptr, bool draw = false);
 		void DebugGlDraw(Camera<T>& camera) override;
 		void DebugGlBind() override;
 
@@ -28,9 +28,9 @@ namespace Lyra
 
 	private:
 		void Init(ModelPointer<T>& model);
-		void DebugCreate(Shader<T>& shader, bool draw) override;
+		void DebugCreate(shader_sp<T> shader, bool draw) override;
 
-		void Create(uint32 leafSize, Shader<T>& shader, bool draw) override;
+		void Create(uint32 leafSize, shader_sp<T> shader, bool draw) override;
 
 	private:
 		std::vector<BBoxObjTriangle<T>> fragments;
@@ -87,18 +87,18 @@ void Lyra::ObjectBVH<T>::GlBind()
 }
 
 template<typename T>
-void Lyra::ObjectBVH<T>::Build(ModelPointer<T> & model, uint32 leafSize, Shader<T> & shader, bool draw)
+void Lyra::ObjectBVH<T>::Build(ModelPointer<T> & model, uint32 leafSize, shader_sp<T> shader, bool draw)
 {
-	std::cout << "Object BVH Build Start.....\n";
+	//std::cout << "Object BVH Build Start.....\n";
 	//提取OBJ的triangle信息
 	Init(model);
 	Create(leafSize, shader, draw);
 	//DebugCreate(shader, draw);
-	std::cout << "Object BVH Build End!!!\n";
+	//std::cout << "Object BVH Build End!!!\n";
 }
 
 template<typename T>
-void Lyra::ObjectBVH<T>::Create(uint32 leafSize, Shader<T> & shader, bool draw)
+void Lyra::ObjectBVH<T>::Create(uint32 leafSize, shader_sp<T> shader, bool draw)
 {
 	//top-down to build BVH
 	std::stack<BVHBuildEntry> todo;
@@ -189,7 +189,7 @@ void Lyra::ObjectBVH<T>::Create(uint32 leafSize, Shader<T> & shader, bool draw)
 }
 
 template<typename T>
-void Lyra::ObjectBVH<T>::DebugCreate(Shader<T> & shader, bool draw)
+void Lyra::ObjectBVH<T>::DebugCreate(shader_sp<T> shader, bool draw)
 {
 	for (auto& frag : fragments) {
 		bBoxes.push_back(frag.GetBBox(shader, draw));

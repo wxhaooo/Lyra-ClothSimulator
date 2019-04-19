@@ -4,6 +4,7 @@
 #include"TrianglePatch.h"
 #include"AdjacentTrianglePatch.h"
 #include"LyraFunction.h"
+#include"ClothBVH.h"
 
 #include<GraphicHelper\Model.h>
 #include<GraphicHelper\Camera.h>
@@ -52,7 +53,7 @@ namespace Lyra
 		//particles这里使用cloth传来的particles，但是索引用自己的索引
 		void Create(std::vector<Particle<T>> &particles);
 
-		void RegeneratePatchInfo(std::vector<Particle<T>> &particles);
+		void ReGeneratePatchInfo(std::vector<Particle<T>> &particles);
 
 		/*Rendering Functions*/
 
@@ -71,6 +72,12 @@ namespace Lyra
 
 		void ApplySpaceForce(SpaceForceSwitch &spaceForceSwitch);
 
+		/*Collision Detection Functions*/
+		void CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult);
+
+		//建立patch的BVH
+		void BuildBVH(uint32 leafSize, shader_sp<T> shader, bool draw);
+
 	private:
 		//用于初始化particles和triangleIndices列表
 		void Init(ClothPatchParms<T> &parms);
@@ -83,6 +90,7 @@ namespace Lyra
 		void GenerateAdjacentTrianglePatches(std::vector<Particle<T>> &particles, ClothPatchParms<T> &parms);
 		//生成三角形列表
 		void GenerateTrianglePatches(std::vector<Particle<T>> &particles, ClothPatchParms<T> &parms);
+		
 
 	private:
 		//首次先得到particle和triangleIndices，然后在cloth里面把index换成全局的，生成一次trianglePathes和adjTriangles
@@ -102,6 +110,9 @@ namespace Lyra
 		std::vector<vec3<uint32>> globalTriangleIndices;
 		std::vector<TrianglePatch<T>> trianglePatches;
 		std::vector<AdjacentTrianglePatch<T>> adjacentTrianglePatches;
+
+		/*碰撞检测和碰撞响应用*/
+		ClothBVH<T> clothBvh;
 
 		/*Rendering 用*/
 		//渲染用局部索引，方便引用UV和控制哪些patch渲染，哪些不渲染
@@ -152,12 +163,12 @@ void Lyra::ClothPatch<T>::LoadPatch(ClothPatchParms<T> &parms)
 
 	Init(parms);
 
-	if (parms.patchMode == ClothPatchMode::LYRA_CLOTH_PATCH_SINGLE) {
-		//如果是单个patch就按原来的方式初始化和渲染
-	}
-	else if (parms.patchMode == ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING) {
-		//如果是缝合模式，就只初始化particles和triangleIndices
-	}
+	//if (parms.patchMode == ClothPatchMode::LYRA_CLOTH_PATCH_SINGLE) {
+	//	//如果是单个patch就按原来的方式初始化和渲染
+	//}
+	//else if (parms.patchMode == ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING) {
+	//	//如果是缝合模式，就只初始化particles和triangleIndices
+	//}
 
 }
 template<typename T>
@@ -404,7 +415,7 @@ void Lyra::ClothPatch<T>::GenerateAdjacentTrianglePatches(std::vector<Particle<T
 }
 
 template<typename T>
-void Lyra::ClothPatch<T>::RegeneratePatchInfo(std::vector<Particle<T>> &particles)
+void Lyra::ClothPatch<T>::ReGeneratePatchInfo(std::vector<Particle<T>> &particles)
 {
 	trianglePatches.clear();
 	adjacentTrianglePatches.clear();
@@ -578,4 +589,17 @@ void Lyra::ClothPatch<T>::ApplySpaceForce(SpaceForceSwitch &spaceForceSwitch)
 		if (enableDampingBendingForce)
 			adjTri.ExplicitDampingBendingForce();
 	}
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::BuildBVH(uint32 leafSize, shader_sp<T> shader, bool draw)
+{
+	clothBvh.ReBuild(trianglePatches, leafSize, shader, draw);
+	//clothBvh.Build(trianglePatches, leafSize, shader, draw);
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult)
+{
+	clothBvh.CollisionWithObjBVH(*objectBvh, collsionResult);
 }
