@@ -45,6 +45,7 @@ std::string bodyVertexShaderPath = "./shader/bodyVertexShader.vs";
 std::string bodyGeometryShaderPath = "./shader/bodyGeometryShader.gs";
 std::string bodyFragmentShaderPath = "./shader/bodyFragmentShader.fs";
 
+//std::string bodyPath = "./model/cyborg/cyborg.obj";
 std::string bodyPath = "./model/rock/rock.obj";
 //std::string bodyPath = "./patch/UvObj_Origin_Back_15.obj";
 
@@ -159,7 +160,7 @@ int main()
 	{
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
-		parms0.name = "test.obj";
+		parms0.name = "test1.obj";
 		//parms0.name = "Square_Front.obj";
 		parms0.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
@@ -393,7 +394,7 @@ int main()
 	}
 	//clothParms
 	{
-		clothParms.delta_t = 0.001f;
+		clothParms.delta_t = 0.04f;
 		clothParms.frameRate = 25.f;
 		clothParms.gravity = Lyra::vec3<Type>(0.f, -9.8f, 0.f);
 		clothParms.windParms.windVelocity = Lyra::vec3<Type>(0.f, 0.f, 3.f);

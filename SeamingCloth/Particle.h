@@ -125,5 +125,7 @@ void Lyra::Particle<T>::UpdatePseudoPosition(T delta_t)
 
 	T delta_t2 = delta_t * delta_t;
 	pseudoPosition = position + position - prePosition + acceleration * delta_t2;
+	//pseudoPosition = vec3<T>(position(0), -1000.f, position(2));
+	//std::cout << pseudoPosition - position << "\n";
 	pseudoVelocity = (pseudoPosition - position) / delta_t;
 }

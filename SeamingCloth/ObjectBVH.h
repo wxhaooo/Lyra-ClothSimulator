@@ -10,7 +10,7 @@ namespace Lyra
 namespace Lyra
 {
 	template<typename T>
-	class ObjectBVH :public BVH<T>
+	class ObjectBVH
 	{
 	public:
 		ObjectBVH() = default;
@@ -21,17 +21,18 @@ namespace Lyra
 		uint32 NLevel() { return nLevel; }
 
 		void Build(ModelPointer<T>& model, uint32 leafSize, shader_sp<T> shader = nullptr, bool draw = false);
-		void DebugGlDraw(Camera<T>& camera) override;
-		void DebugGlBind() override;
+		void DebugGlDraw(Camera<T>& camera);
+		void DebugGlBind();
 
-		void GlDraw(Camera<T>& camera) override;
-		void GlBind() override;
+		void GlDraw(Camera<T>& camera);
+		void GlBind();
 
 	private:
 		void Init(ModelPointer<T>& model);
-		void DebugCreate(shader_sp<T> shader, bool draw) override;
+		void DebugCreate(shader_sp<T> shader, bool draw);
+		void DebugTrversal();
 
-		void Create(uint32 leafSize, shader_sp<T> shader, bool draw) override;
+		void Create(uint32 leafSize, shader_sp<T> shader, bool draw);
 
 	private:
 		std::vector<BBoxObjTriangle<T>> fragments;
@@ -94,6 +95,14 @@ void Lyra::ObjectBVH<T>::Build(ModelPointer<T> & model, uint32 leafSize, shader_
 	//提取OBJ的triangle信息
 	Init(model);
 	Create(leafSize, shader, draw);
+	//DebugTrversal();
+
+	/*for (uint32 i = 0; i < flatBvhTree.size(); i++) {
+		if (flatBvhTree[i].rightOffset == 0) {
+			std::cout << flatBvhTree[i].start << "\n";
+		}
+	}
+	system("pause");*/
 	//DebugCreate(shader, draw);
 	//std::cout << "Object BVH Build End!!!\n";
 }
@@ -207,5 +216,38 @@ void Lyra::ObjectBVH<T>::Init(ModelPointer<T> & model)
 
 	for (auto& tri : triangles) {
 		fragments.push_back(BBoxObjTriangle<T>(tri.V1(), tri.V2(), tri.V3()));
+	}
+}
+
+template<typename T>
+void Lyra::ObjectBVH<T>::DebugTrversal()
+{
+	std::vector<bool> isVisited;
+	isVisited.resize(fragments.size(), false);
+
+	uint32 root = 0;
+	std::stack<uint32> s;
+	s.push(root);
+	while (!s.empty()) {
+		uint32 cur = s.top();
+		s.pop();
+
+		if (flatBvhTree[cur].rightOffset == 0) {
+			for (uint32 i = 0; i < flatBvhTree[cur].nPrims; i++) {
+				isVisited[flatBvhTree[cur].start + i] = true;
+			}
+		}
+		else {
+			s.push(cur + flatBvhTree[cur].rightOffset);
+			s.push(cur + 1);
+		}
+	}
+
+	for (uint32 i = 0; i < isVisited.size(); i++) {
+		if (!isVisited[i]) {
+			std::cout << "BVH of Object do not build correctly!!!\n";
+			system("pause");
+			exit(0);
+		}
 	}
 }

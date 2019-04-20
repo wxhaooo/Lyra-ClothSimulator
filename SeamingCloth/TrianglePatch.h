@@ -302,19 +302,19 @@ void Lyra::TrianglePatch<T>::ExplicitShearForce()
 	T wVl = wUV.col(1).norm();
 
 	T Csh = area * wU.dot(wV);
-	T shearCoefficent = - shearCoefficent * area * Csh;
+	T shearCoefficentTmp = - shearCoefficent * area * Csh;
 
 	//shear force p0
 	vec3<T> shearp0 = vec3<T>(wux0 * wV(0) + wvx0 * wU(0), wux0 * wV(1) + wvx0 * wV(1), wux0 * wV(2) + wvx0 * wV(2));
-	shearp0 *= shearCoefficent;
+	shearp0 *= shearCoefficentTmp;
 	x0->ApplyForce(shearp0);
 	//shear force p1
 	vec3<T> shearp1 = vec3<T>(wux1 * wV(0) + wvx1 * wU(0), wux1 * wV(1) + wvx1 * wV(1), wux1 * wV(2) + wvx1 * wV(2));
-	shearp1 *= shearCoefficent;
+	shearp1 *= shearCoefficentTmp;
 	x1->ApplyForce(shearp1);
 	//shear force p2
 	vec3<T> shearp2 = vec3<T>(wux2 * wV(0) + wvx2 * wU(0), wux2 * wV(1) + wvx2 * wV(1), wux2 * wV(2) + wvx2 * wV(2));
-	shearp2 *= shearCoefficent;
+	shearp2 *= shearCoefficentTmp;
 	x2->ApplyForce(shearp2);
 }
 

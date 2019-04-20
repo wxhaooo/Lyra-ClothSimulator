@@ -490,30 +490,40 @@ void Lyra::Cloth<T>::DebugCollisionResponse(CollisionResults_C2O<T>& collsionRes
 {
 	auto& edgeResults = collsionResult.edge2Edge;
 	auto& v2TriangleResults = collsionResult.vertex2Triangle;
+	auto& v2TriangleResults_ = collsionResult.vertex2Triangle_;
 
 	for (auto& edge : edgeResults) {
 		edge.clothEdge0.p0->isCollide = true;
 		edge.clothEdge0.p1->isCollide = true;
+
+		//std::cout << edge.clothEdge0.p0->pseudoPosition - edge.clothEdge0.p0->position << "\n";
 	}
 
 	for (auto& v2t : v2TriangleResults){
 		v2t.v0->isCollide = true;
 	}
+
+	/*for (auto& v2t_ : v2TriangleResults_) {
+		v2t_.t0->isCollide = true;
+		v2t_.t1->isCollide = true;
+		v2t_.t2->isCollide = true;
+	}*/
 }
 
 template<typename T>
 void Lyra::Cloth<T>::DebugUpdatePosition()
 {
 	for (auto& p : particles) {
-		if (!p.isCollide)
+		if (!p.isCollide) {
 			p.UpdatePosition(parms.delta_t);
+			//system("pause");
+		}
 	}
 }
 
 template<typename T>
 void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 {
-	BuildPatchBVH(1);
 	//ApplyInternalForce();
 	ApplyExternalForce();
 
@@ -522,19 +532,46 @@ void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 
 	if (parms.enableCollisionDetect) {
 		UpdatePesudoPosition();
+		BuildPatchBVH(1);
 		//printf_s("%d %d\n", objectBvh->Fragments().size(), objectBvh->FlatBVHTree().size());
 		CollisionDetectWithRigidbody(objectBvh, collisionResults_C2O);
 
-		/*printf_s("%d %d\n", collisionResults_C2O.edge2Edge.size(),
-			collisionResults_C2O.vertex2Triangle.size());*/
-
-		if (collisionResults_C2O.edge2Edge.size() != 0 || collisionResults_C2O.vertex2Triangle.size() != 0) {
+		if (collisionResults_C2O.edge2Edge.size() != 0 || collisionResults_C2O.vertex2Triangle.size() != 0
+			|| collisionResults_C2O.vertex2Triangle_.size() != 0) {
+			/*printf_s("%d %d %d\n", collisionResults_C2O.edge2Edge.size(),
+				collisionResults_C2O.vertex2Triangle.size(),
+				collisionResults_C2O.vertex2Triangle_.size());*/
 			DebugCollisionResponse(collisionResults_C2O);
 		}
 	}
 	DebugUpdatePosition();
 		//UpdatePosition();
-	elapseTime += parms.delta_t;
+	
+	//BuildPatchBVH(1);
+	////ApplyInternalForce();
+	//ApplyExternalForce();
+
+	//CollisionResults_C2O<T> collisionResults_C2O;
+	//CollisionResults_C2C<T> collisionResults_C2C;
+
+	//if (parms.enableCollisionDetect) {
+	//	UpdatePesudoPosition();
+	//	//printf_s("%d %d\n", objectBvh->Fragments().size(), objectBvh->FlatBVHTree().size());
+	//	CollisionDetectWithRigidbody(objectBvh, collisionResults_C2O);
+
+	//	if (collisionResults_C2O.edge2Edge.size() != 0 || collisionResults_C2O.vertex2Triangle.size() != 0
+	//		|| collisionResults_C2O.vertex2Triangle_.size() != 0) {
+	//		/*printf_s("%d %d %d\n", collisionResults_C2O.edge2Edge.size(),
+	//			collisionResults_C2O.vertex2Triangle.size(),
+	//			collisionResults_C2O.vertex2Triangle_.size());*/
+	//		DebugCollisionResponse(collisionResults_C2O);
+	//	}
+	//}
+	//DebugUpdatePosition();
+	//	//UpdatePosition();
+	//elapseTime += parms.delta_t;
+
+	//std::cout << elapseTime << "\n";
 }
 
 template<typename T>
@@ -542,6 +579,8 @@ void Lyra::Cloth<T>::UpdatePesudoPosition()
 {
 	for (auto& p : particles) {
 		p.UpdatePseudoPosition(parms.delta_t);
+
+		//std::cout << p.pseudoPosition << "\n";
 	}
 }
 
@@ -568,6 +607,10 @@ void Lyra::Cloth<T>::Simulate(Lyra::objectBvh_sp<T> objectBvh)
 
 		PatchSimulate(objectBvh);
 	}
+
+	elapseTime += parms.delta_t;
+
+	//std::cout << elapseTime << "\n";
 }
 
 template<typename T>

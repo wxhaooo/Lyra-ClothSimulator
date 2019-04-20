@@ -113,6 +113,7 @@ namespace Lyra
 
 		/*碰撞检测和碰撞响应用*/
 		ClothBVH<T> clothBvh;
+		ClothBVH<T> clothBvhPost;
 
 		/*Rendering 用*/
 		//渲染用局部索引，方便引用UV和控制哪些patch渲染，哪些不渲染
@@ -594,7 +595,8 @@ void Lyra::ClothPatch<T>::ApplySpaceForce(SpaceForceSwitch &spaceForceSwitch)
 template<typename T>
 void Lyra::ClothPatch<T>::BuildBVH(uint32 leafSize, shader_sp<T> shader, bool draw)
 {
-	clothBvh.ReBuild(trianglePatches, leafSize, shader, draw);
+	clothBvh.ReBuild(trianglePatches, leafSize, ClothBvhCategory::CLOTH_BVH_PRE, shader, draw);
+	//clothBvhPost.ReBuild(trianglePatches, leafSize, ClothBvhCategory::CLOTH_BVH_POST, shader, draw);
 	//clothBvh.Build(trianglePatches, leafSize, shader, draw);
 }
 
@@ -604,4 +606,5 @@ void Lyra::ClothPatch<T>::CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh
 	/*std::cout << clothBvh.NLevels() << " " << objectBvh->NLevel() << "\n";
 	system("pause");*/
 	clothBvh.CollisionWithObjBVH(*objectBvh, collsionResult);
+	//clothBvhPost.CollisionWithObjBVH(*objectBvh, collsionResult);
 }

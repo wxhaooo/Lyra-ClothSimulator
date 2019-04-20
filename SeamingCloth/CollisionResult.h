@@ -35,6 +35,17 @@ namespace Lyra
 	};
 
 	template<typename T>
+	struct Vertex2Triangle_C2O_
+	{
+		//object vertex
+		VertexPointer<T> v0;
+		//cloth triangle
+		particle_pt<T> t0;
+		particle_pt<T> t1;
+		particle_pt<T> t2;
+	};
+
+	template<typename T>
 	struct Edge2Edge_C2C
 	{
 		ClothEdge<T> clothEdge0;
@@ -59,6 +70,7 @@ namespace Lyra
 	template<typename T>
 	struct CollisionResults_C2O
 	{
+		std::vector<Vertex2Triangle_C2O_<T>> vertex2Triangle_;
 		std::vector<Vertex2Triangle_C2O<T>> vertex2Triangle;
 		std::vector<Edge2Edge_C2O<T>> edge2Edge;
 	};

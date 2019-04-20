@@ -58,8 +58,13 @@ namespace Lyra
 		BBoxClothTriangle() = default;
 		BBoxClothTriangle(particle_pt<T> p0, particle_pt<T> p1, particle_pt<T> p2);
 
+		//用t时刻的位置构建BBox
 		BBox<T> GetBBox(shader_sp<T> shader, bool draw = false) override;
 		vec3<T> GetCentroid() override;
+
+		//用t+\delta t时刻的位置构建BBox
+		BBox<T> GetPostBBox(shader_sp<T> shader, bool draw = false);
+		vec3<T> GetPostCentroid();
 
 		bool IsIntersectWithBBox(BBox<T>& bBox);
 
@@ -114,9 +119,24 @@ Lyra::BBoxClothTriangle<T>::BBoxClothTriangle(particle_pt<T> pp0, particle_pt<T>
 }
 
 template<typename T>
+Lyra::BBox<T> Lyra::BBoxClothTriangle<T>::GetPostBBox(shader_sp<T> shader, bool draw)
+{
+	vec3<T> minCornerCoordTmp, maxCornerCoordTmp;
+	minCornerCoordTmp = Min(p0->pseudoPosition, p1->pseudoPosition, p2->pseudoPosition);
+	maxCornerCoordTmp = Max(p0->pseudoPosition, p1->pseudoPosition, p2->pseudoPosition);
+
+	const vec3<T> minCornerCoord(minCornerCoordTmp(0), minCornerCoordTmp(1), minCornerCoordTmp(2));
+	const vec3<T> maxCornerCoord(maxCornerCoordTmp(0), maxCornerCoordTmp(1), maxCornerCoordTmp(2));
+
+	return Lyra::BBox<T>(minCornerCoord, maxCornerCoord, shader, draw);
+}
+
+template<typename T>
 Lyra::BBox<T> Lyra::BBoxClothTriangle<T>::GetBBox(shader_sp<T> shader, bool draw)
 {
 	vec3<T> minCornerCoordTmp, maxCornerCoordTmp;
+	/*minCornerCoordTmp = Min(p0->pseudoPosition, p1->pseudoPosition, p2->pseudoPosition);
+	maxCornerCoordTmp = Max(p0->pseudoPosition, p1->pseudoPosition, p2->pseudoPosition);*/
 	minCornerCoordTmp = Min(p0->position, p1->position, p2->position);
 	maxCornerCoordTmp = Max(p0->position, p1->position, p2->position);
 
@@ -127,8 +147,16 @@ Lyra::BBox<T> Lyra::BBoxClothTriangle<T>::GetBBox(shader_sp<T> shader, bool draw
 }
 
 template<typename T>
+Lyra::vec3<T> Lyra::BBoxClothTriangle<T>::GetPostCentroid()
+{
+	vec3<T> centroid = T(1) / 3 * (p0->pseudoPosition + p1->pseudoPosition + p2->pseudoPosition);
+	return centroid;
+}
+
+template<typename T>
 Lyra::vec3<T> Lyra::BBoxClothTriangle<T>::GetCentroid()
 {
+	//vec3<T> centroid = T(1) / 3 * (p0->pseudoPosition + p1->pseudoPosition + p2->pseudoPosition);
 	vec3<T> centroid = T(1) / 3 * (p0->position + p1->position + p2->position);
 
 	return centroid;
