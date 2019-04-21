@@ -38,6 +38,7 @@ namespace Lyra
 		/////////////////////////////Collision Detection//////////////////////////////////////////
 		bool IsPointInBox(vec3<T>& point);
 		bool IsIntersectWithBBox(BBox<T>& bBox);
+		bool IsIntersectWithMovingBBox(BBox<T>& bBox);
 		/////////////////////////////Visualize BBox///////////////////////////////////////////////
 		void InitDraw(glm::vec<3, T>& color);
 		void InitDraw();
@@ -58,6 +59,9 @@ namespace Lyra
 
 		vec3<T> minCorner;
 		vec3<T> maxCorner;
+
+		//for movable AABB
+		vec3<T> velocity;
 
 		//Shader<T> shader;
 		shader_sp<T> shader;
@@ -140,6 +144,36 @@ void Lyra::BBox<T>::ExpandToInclude(const BBox<T>& bBox)
 }
 
 template<typename T>
+bool Lyra::BBox<T>::IsIntersectWithMovingBBox(BBox<T>& bBox)
+{
+	T tFirst, tLast;
+	if (IsIntersectWithBBox(bBox)) {
+		tFirst = tLast = T(0);
+		return true;
+	}
+
+	vec3<T> relV = bBox.velocity - velocity;
+	tFirst = 0.0f;
+	tLast = 1.0f;
+	// For each axis, determine times of first and last contact, if any
+	for (int i = 0; i < 3; i++) {
+		if (relV(i) < 0.0f) {
+			if (bBox.maxCorner(i) < minCorner(i)) return false; 
+			if (maxCorner(i) < bBox.minCorner(i)) tFirst = std::max((maxCorner(i) - bBox.minCorner(i)) / relV(i), tFirst);
+			if (bBox.maxCorner(i) > minCorner(i)) tLast = std::min((minCorner(i) - bBox.maxCorner(i)) / relV(i), tLast);
+		}
+		if (relV(i) > 0.0f) {
+			if (bBox.minCorner(i) > maxCorner(i)) return false; 
+			if (bBox.maxCorner(i) < minCorner(i)) tFirst = std::max((minCorner(i) - bBox.maxCorner(i)) / relV(i), tFirst);
+			if (maxCorner(i) > bBox.minCorner(i)) tLast = std::min((maxCorner(i) - bBox.minCorner(i)) / relV(i), tLast);
+		}
+		// No overlap possible if time of first contact occurs after time of last contact
+		if (tFirst > tLast) return false;
+	}
+	return true;
+}
+
+template<typename T>
 bool Lyra::BBox<T>::IsIntersectWithBBox(BBox<T>& bBox)
 {
 	if (maxCorner(0) < bBox.minCorner(0) || minCorner(0) > bBox.maxCorner(0)) return false;
@@ -168,6 +202,8 @@ void Lyra::BBox<T>::Init(const vec3<T>& minCornerCoord, const vec3<T>& maxCorner
 	this->minCorner = minCornerCoord;
 	this->maxCorner = maxCornerCoord;
 
+	velocity.setZero();
+
 	halfExtent = (maxCornerCoord - minCornerCoord) * T(1) / 2;
 
 	center = maxCornerCoord - halfExtent;
@@ -187,6 +223,8 @@ void Lyra::BBox<T>::Init(vec3<T> &center, vec3<T> &halfExtent, shader_sp<T> shad
 
 	minCorner = center - halfExtent;
 	maxCorner = center + halfExtent;
+
+	velocity.setZero();
 
 	this->shader = shader;
 

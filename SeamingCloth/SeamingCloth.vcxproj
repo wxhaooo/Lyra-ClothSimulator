@@ -140,11 +140,12 @@
     <ClInclude Include="colorMapper.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="ForceSwitch.h" />
+    <ClInclude Include="GlobalSwitch.h" />
     <ClInclude Include="LyraFunction.h" />
     <ClInclude Include="LyraRandom.h" />
+    <ClInclude Include="MeshExporter.h" />
     <ClInclude Include="ObjectBVH.h" />
     <ClInclude Include="ObjectEdge.h" />
-    <ClInclude Include="ParmSwitch.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="ClothPatch.h" />
     <ClInclude Include="ClothPatchParms.h" />

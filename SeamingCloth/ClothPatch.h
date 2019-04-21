@@ -5,6 +5,7 @@
 #include"AdjacentTrianglePatch.h"
 #include"LyraFunction.h"
 #include"ClothBVH.h"
+#include"MeshExporter.h"
 
 #include<GraphicHelper\Model.h>
 #include<GraphicHelper\Camera.h>
@@ -77,6 +78,9 @@ namespace Lyra
 
 		//建立patch的BVH
 		void BuildBVH(uint32 leafSize, shader_sp<T> shader, bool draw);
+		/*Other Auxiliary Functions*/
+		void SaveMesh(std::string& fileName, std::string& filePath,
+			Lyra::MeshExporterSwitch exporterSwitch = Lyra::MeshExporterSwitch::MESH_EXPORTER_ALL);
 
 	private:
 		//用于初始化particles和triangleIndices列表
@@ -95,6 +99,8 @@ namespace Lyra
 	private:
 		//首次先得到particle和triangleIndices，然后在cloth里面把index换成全局的，生成一次trianglePathes和adjTriangles
 		//在达到缝合条件后把triangleIndices沿缝合线重新组织一次，然后再生成新的trianglePathes和adjTriangles，后面模拟就没有问题了
+
+		MeshExporter<T> meshExporter;
 
 		//该patch的参数
 		ClothPatchParms<T> parms;
@@ -172,6 +178,16 @@ void Lyra::ClothPatch<T>::LoadPatch(ClothPatchParms<T> &parms)
 	//}
 
 }
+
+template<typename T>
+void Lyra::ClothPatch<T>::SaveMesh(std::string& fileName, std::string& filePath,
+	Lyra::MeshExporterSwitch exporterSwitch)
+{
+	meshExporter.Save(positionVec, uvCoordVec, normalVec, triangleIndices, fileName, filePath, exporterSwitch);
+	//meshExporter.Save()
+	std::cout << fileName << " Saved!!!!!!\n";
+}
+
 template<typename T>
 void Lyra::ClothPatch<T>::Init(ClothPatchParms<T> &parms)
 {
@@ -287,6 +303,7 @@ void Lyra::ClothPatch<T>::RevisedMass()
 		}
 	}
 }
+
 template<typename T>
 void Lyra::ClothPatch<T>::Create(std::vector<Particle<T>> &particles)
 {
@@ -300,6 +317,7 @@ void Lyra::ClothPatch<T>::Create(std::vector<Particle<T>> &particles)
 	GenerateAdjacentTrianglePatches(particles,parms);
 
 }
+
 template<typename T>
 void Lyra::ClothPatch<T>::Create()
 {

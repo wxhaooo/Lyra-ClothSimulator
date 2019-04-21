@@ -229,7 +229,7 @@ void Lyra::ClothBVH<T>::Create(uint32 leafSize, shader_sp<T> shader, bool draw, 
 
 		if (cat == ClothBvhCategory::CLOTH_BVH_PRE)
 		{
-			bb= fragments[startTmp].GetBBox(shader, false);
+			bb = fragments[startTmp].GetBBox(shader, false);
 			//bc用于估计整个OBJ的质心位置,不需要渲染出来
 			bc = BBox<T>(fragments[startTmp].GetCentroid(), shader, false);
 
@@ -249,6 +249,14 @@ void Lyra::ClothBVH<T>::Create(uint32 leafSize, shader_sp<T> shader, bool draw, 
 		}
 
 		node.bBox = bb;
+
+		//计算BBox的平均速度，用三角形三个顶点插出来
+		vec3<T> vTmp;
+		vTmp.setZero();
+		for (uint32 i = 0; i < node.nPrims; i++) {
+			vTmp += fragments[node.start + i].GetAverageVelocty();
+			node.bBox.velocity = T(1) / node.nPrims * vTmp;
+		}
 
 		if (nPrims <= leafSize) {
 			node.rightOffset = BvhMagicNumber::LEAF;
@@ -361,7 +369,8 @@ void Lyra::ClothBVH<T>::BVHCollisionDetect(
 
 		//printf_s("%d\n", s.size());
 
-		bool bBoxOverlap = curPair.p0.bBox.IsIntersectWithBBox(curPair.p1.bBox);
+		//bool bBoxOverlap = curPair.p0.bBox.IsIntersectWithBBox(curPair.p1.bBox);
+		bool bBoxOverlap = curPair.p0.bBox.IsIntersectWithMovingBBox(curPair.p1.bBox);
 		if (!bBoxOverlap) continue;
 
 		//如果都是叶子节点,检查叶子节点中的triangle的相交情况

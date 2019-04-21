@@ -141,6 +141,9 @@ namespace Lyra
 		/*Debug Functions*/
 		void DebugSimulate(shader_sp<T> shader);
 		void SimulationInfo();
+		/*Auxiliary Functions*/
+		void SaveClothMesh(std::string fileName, std::string& filePath,
+			MeshExporterSwitch exportSwitch = MESH_EXPORTER_ALL);
 
 	private:
 		void UpdatePosition();
@@ -153,7 +156,7 @@ namespace Lyra
 		void GlUpdateSeaming();
 		void GlRenderSeaming(gph::Camera<T> &camera);
 
-		void BuildPatchBVH(uint32 leafSize = 1, shader_sp<T> shader = nullptr, bool draw = false);
+		void BuildPatchBVH(uint32 leafSize = 4, shader_sp<T> shader = nullptr, bool draw = false);
 
 		void GramentSimulate();
 		void PatchSimulate(Lyra::objectBvh_sp<T> objectBvh);
@@ -611,6 +614,18 @@ void Lyra::Cloth<T>::Simulate(Lyra::objectBvh_sp<T> objectBvh)
 	elapseTime += parms.delta_t;
 
 	//std::cout << elapseTime << "\n";
+}
+
+template<typename T>
+void Lyra::Cloth<T>::SaveClothMesh(std::string fileName, std::string& filePath,
+	MeshExporterSwitch exportSwitch)
+{
+	char number[1000];
+	for (uint32 i = 0; i < patches.size(); i++) {
+		sprintf_s(number, "patch_%d_", i);
+		fileName = std::string(number) + fileName;
+		patches[i]->SaveMesh(fileName, filePath, exportSwitch);
+	}
 }
 
 template<typename T>

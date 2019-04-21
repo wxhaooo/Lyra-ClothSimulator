@@ -1,12 +1,13 @@
 #include"Cloth.h"
 #include"ClothPatch.h"
-#include"ParmSwitch.h"
+#include"GlobalSwitch.h"
 #include"Shader.h"
 #include"BBox.h"
 #include"UniformBVH.h"
 
 #include"ObjectBVH.h"
 #include"ClothBVH.h"
+#include"MeshExporter.h"
 
 #include<iostream>
 #include<cassert>
@@ -48,6 +49,8 @@ std::string bodyFragmentShaderPath = "./shader/bodyFragmentShader.fs";
 //std::string bodyPath = "./model/cyborg/cyborg.obj";
 std::string bodyPath = "./model/rock/rock.obj";
 //std::string bodyPath = "./patch/UvObj_Origin_Back_15.obj";
+
+std::string filePath = "./obj/";
 
 using Type = float;
 
@@ -121,6 +124,8 @@ int main()
 		setting.screenHeight = screenHeight;
 		setting.FOV = 45.f;
 	}
+	//////////////////////////////Other setting///////////////////////////////////////////////////
+	
 
 	//////////////////////////////body setting///////////////////////////////////////////////////
 	gph::Shader bodyShader(bodyVertexShaderPath.c_str(), bodyFragmentShaderPath.c_str());
@@ -160,7 +165,7 @@ int main()
 	{
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
-		parms0.name = "test1.obj";
+		parms0.name = "Square_Back_y=5.obj";
 		//parms0.name = "Square_Front.obj";
 		parms0.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
@@ -394,7 +399,7 @@ int main()
 	}
 	//clothParms
 	{
-		clothParms.delta_t = 0.04f;
+		clothParms.delta_t = delta_t;
 		clothParms.frameRate = 25.f;
 		clothParms.gravity = Lyra::vec3<Type>(0.f, -9.8f, 0.f);
 		clothParms.windParms.windVelocity = Lyra::vec3<Type>(0.f, 0.f, 3.f);
@@ -458,7 +463,8 @@ int main()
 	camera.Init(setting, modelMat);
 
 	glEnable(GL_DEPTH_TEST);
-	int i = 0;
+	uint32 frame = 0;
+	uint32 meshCount = 0;
 	while (!glfwWindowShouldClose(window)) {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -478,6 +484,16 @@ int main()
 		bodyShader.use();
 		bodyShader.setMat4("MVP", MVP);
 		body->GlDrawModel(bodyShader, lineMode);
+
+		if (saveMesh) {
+			if (frame % savedPerFrames == 0) {
+				char name[1000];
+				sprintf_s(name, "obj_%08d.obj", meshCount);
+				cloth->SaveClothMesh(name, filePath);
+				meshCount++;
+
+			}
+		}
 
 		//bvh->DrawExternalBBox(camera);
 		//bvh->DrawSubBBoxs(camera);

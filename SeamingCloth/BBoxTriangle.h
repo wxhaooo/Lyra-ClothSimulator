@@ -65,6 +65,7 @@ namespace Lyra
 		//用t+\delta t时刻的位置构建BBox
 		BBox<T> GetPostBBox(shader_sp<T> shader, bool draw = false);
 		vec3<T> GetPostCentroid();
+		vec3<T> GetAverageVelocty();
 
 		bool IsIntersectWithBBox(BBox<T>& bBox);
 
@@ -116,6 +117,8 @@ template<typename T>
 Lyra::BBoxClothTriangle<T>::BBoxClothTriangle(particle_pt<T> pp0, particle_pt<T> pp1, particle_pt<T> pp2)
 {
 	p0 = pp0; p1 = pp1; p2 = pp2;
+
+	GetAverageVelocty();
 }
 
 template<typename T>
@@ -160,6 +163,18 @@ Lyra::vec3<T> Lyra::BBoxClothTriangle<T>::GetCentroid()
 	vec3<T> centroid = T(1) / 3 * (p0->position + p1->position + p2->position);
 
 	return centroid;
+}
+
+template<typename T>
+Lyra::vec3<T> Lyra::BBoxClothTriangle<T>::GetAverageVelocty()
+{
+	//vec3<T> centroid = GetCentroid();
+
+	vec3<T> v0v = p0->velocity;
+	vec3<T> v1v = p1->velocity;
+	vec3<T> v2v = p2->velocity;
+
+	return T(1) / 3 * (v0v + v1v + v2v);
 }
 
 template<typename T>

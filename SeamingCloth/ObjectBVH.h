@@ -20,7 +20,7 @@ namespace Lyra
 		std::vector<BBoxObjTriangle<T>>& Fragments() { return fragments; }
 		uint32 NLevel() { return nLevel; }
 
-		void Build(ModelPointer<T>& model, uint32 leafSize, shader_sp<T> shader = nullptr, bool draw = false);
+		void Build(ModelPointer<T>& model, uint32 leafSize=4, shader_sp<T> shader = nullptr, bool draw = false);
 		void DebugGlDraw(Camera<T>& camera);
 		void DebugGlBind();
 

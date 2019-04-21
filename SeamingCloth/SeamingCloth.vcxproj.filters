@@ -42,9 +42,6 @@
     <ClInclude Include="LyraFunction.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ParmSwitch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -85,6 +82,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ObjectEdge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshExporter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GlobalSwitch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
