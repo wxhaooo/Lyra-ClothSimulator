@@ -33,6 +33,7 @@ namespace Lyra
 		void Build(std::vector<TrianglePatch<T>>& triangles, uint32 leafSize,
 			ClothBvhCategory cat= ClothBvhCategory::CLOTH_BVH_PRE,
 			shader_sp<T> shader=nullptr, bool draw = false);
+		
 		void ReBuild(std::vector<TrianglePatch<T>>& triangles, uint32 leafSize,
 			ClothBvhCategory cat = ClothBvhCategory::CLOTH_BVH_PRE,
 			shader_sp<T> shader = nullptr, bool draw = false);
@@ -330,14 +331,14 @@ void Lyra::ClothBVH<T>::CollisionWithObjBVH(ObjectBVH<T>& objectBVH, CollisionRe
 	//system("pause");
 
 	//暴力检测
-	/*for (auto& clothFrag : fragments) {
+	for (auto& clothFrag : fragments) {
 		for (auto& objectFrag : objectFragments) {
 			Edge2EdgeCollisionDetect(clothFrag, objectFrag, collisionResult);
 			Point2TriangleCollisionDetect(clothFrag, objectFrag, collisionResult);
 		}
-	}*/
+	}
 
-	BVHCollisionDetect(flatBvhTree, objectFlatBvhTree, fragments, objectFragments, collisionResult);
+	//BVHCollisionDetect(flatBvhTree, objectFlatBvhTree, fragments, objectFragments, collisionResult);
 }
 
 template<typename T>
@@ -369,8 +370,13 @@ void Lyra::ClothBVH<T>::BVHCollisionDetect(
 
 		//printf_s("%d\n", s.size());
 
-		//bool bBoxOverlap = curPair.p0.bBox.IsIntersectWithBBox(curPair.p1.bBox);
-		bool bBoxOverlap = curPair.p0.bBox.IsIntersectWithMovingBBox(curPair.p1.bBox);
+		/*bool bBoxOverlap;
+		if (curPair.p0.rightOffset == 0 || curPair.p1.rightOffset == 0)
+			bBoxOverlap = curPair.p0.bBox.IsIntersectWithMovingBBox(curPair.p1.bBox);
+		else
+			bBoxOverlap = curPair.p0.bBox.IsIntersectWithBBox(curPair.p1.bBox);*/
+		bool bBoxOverlap = curPair.p0.bBox.IsIntersectWithBBox(curPair.p1.bBox);
+		//bool bBoxOverlap = curPair.p0.bBox.IsIntersectWithMovingBBox(curPair.p1.bBox);
 		if (!bBoxOverlap) continue;
 
 		//如果都是叶子节点,检查叶子节点中的triangle的相交情况
@@ -539,18 +545,18 @@ void Lyra::ClothBVH<T>::Point2TriangleCollisionDetect(BBoxClothTriangle<T>& clot
 	particle_pt<T> p1 = clothTriangle.P1();
 	particle_pt<T> p2 = clothTriangle.P2();
 
-	/*VertexPointer<T> v0 = objTriangle.V0();
+	VertexPointer<T> v0 = objTriangle.V0();
 	VertexPointer<T> v1 = objTriangle.V1();
-	VertexPointer<T> v2 = objTriangle.V2();*/
+	VertexPointer<T> v2 = objTriangle.V2();
 
 	//solve a tri-equation to decide whether point intesect with triangle
 	Point2TriangleCollisionDetect(p0, objTriangle, collsionResult);
 	Point2TriangleCollisionDetect(p1, objTriangle, collsionResult);
 	Point2TriangleCollisionDetect(p2, objTriangle, collsionResult);
 
-	/*Point2TriangleCollisionDetect(v0, clothTriangle, collsionResult);
+	Point2TriangleCollisionDetect(v0, clothTriangle, collsionResult);
 	Point2TriangleCollisionDetect(v1, clothTriangle, collsionResult);
-	Point2TriangleCollisionDetect(v2, clothTriangle, collsionResult);*/
+	Point2TriangleCollisionDetect(v2, clothTriangle, collsionResult);
 }
 
 template<typename T>

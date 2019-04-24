@@ -69,8 +69,7 @@ template<typename T>
 void Lyra::ObjectBVH<T>::GlDraw(Camera<T>& camera)
 {
 	for (auto& flatNode : flatBvhTree) {
-		//if(flatNode.level == 8)
-		flatNode.bBox.GlDraw(camera);
+			flatNode.bBox.GlDraw(camera);
 	}
 }
 

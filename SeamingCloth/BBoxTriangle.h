@@ -4,6 +4,8 @@
 #include"BBox.h"
 #include"Particle.h"
 
+#include<vector>
+
 #include<GraphicHelper/Vertex.h>
 
 namespace Lyra
@@ -43,11 +45,48 @@ namespace Lyra
 		BBox<T> GetBBox(shader_sp<T> shader, bool draw = false) override;
 		vec3<T> GetCentroid() override;
 
+		void GlBind()
+		{
+			std::vector<glm::vec<3, T>> tmp;
+			tmp.push_back(v0->position);
+			tmp.push_back(v1->position);
+			tmp.push_back(v2->position);
+
+			VAO.reset(new uint32());
+			VBO.reset(new uint32());
+
+			glGenVertexArrays(1, VAO.get());
+			glGenBuffers(1, VBO.get());
+
+			glBindVertexArray(*VAO);
+
+			//∂•µ„Œª÷√ Ù–‘
+			glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+			glBufferData(GL_ARRAY_BUFFER, tmp.size() * sizeof(glm::vec<3, T>), &(tmp[0]), GL_STREAM_DRAW);
+			glEnableVertexAttribArray(0);
+			if (typeid(T) == typeid(float))
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec<3, T>), (void*)0);
+			else if (typeid(T) == typeid(double))
+				glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, sizeof(glm::vec<3, T>), (void*)0);
+
+			glBindVertexArray(0);
+		}
+		void GlDraw()
+		{
+
+			glBindVertexArray(*VAO);
+
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+
+			glBindVertexArray(0);
+		}
+
 		VertexPointer<T> V0() { return v0; }
 		VertexPointer<T> V1() { return v1; }
 		VertexPointer<T> V2() { return v2; }
 
 	private:
+		uint32_sp VAO, VBO;
 		VertexPointer<T> v0, v1, v2;
 	};
 

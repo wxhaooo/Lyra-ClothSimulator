@@ -9,6 +9,7 @@ namespace Lyra
 	std::default_random_engine randomEngine(time(0));
 	template<typename T>
 	using randomDist = std::uniform_real_distribution<T>;
+	using randomDist_i = std::uniform_int_distribution<uint32>;
 
 	template<typename T>
 	glm::vec<3, T> ColorGenerator()

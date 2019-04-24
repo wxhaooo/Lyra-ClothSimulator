@@ -62,6 +62,9 @@ struct Lyra::ClothParms
 
 	//for seaming
 	Shader<T> shader;
+	
+	//for debug
+	shader_sp<T> bvhShader;
 
 	ClothParms<T> &operator=(ClothParms<T> &parms)
 	{
@@ -85,6 +88,7 @@ struct Lyra::ClothParms
 		enableSeaming = parms.enableSeaming;
 
 		shader = parms.shader;
+		bvhShader = parms.bvhShader;
 
 		return *this;
 	}
@@ -138,6 +142,12 @@ namespace Lyra
 		void Rendering(gph::Camera<T> &camera, bool lineMode);
 		void GlBind();
 		void GlUpdate();
+		void GlDrawBvh(gph::Camera<T>& camera)
+		{
+			for (auto& patch : patches) {
+				patch->GlDrawBvh(camera);
+			}
+		}
 		/*Debug Functions*/
 		void DebugSimulate(shader_sp<T> shader);
 		void SimulationInfo();
@@ -164,6 +174,10 @@ namespace Lyra
 		void CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult);
 		void CollisionDetectWithOtherCloth();
 		void CollisionDetectWithSelf();
+
+		void SimpleCollisionResponseWithRigidbody(CollisionResults_C2O<T>& collsionResult,T fricationFactor,T dampingFactor);
+		void SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_C2O<T>>& edge2Edges, T fricationFactor, T dampingFactor);
+		void SimplePoint2TriangleResponseWithRigidbody(std::vector<Vertex2Triangle_C2O<T>>& v2Triangles,T fricationFactor, T dampingFactor);
 
 		void DebugUpdatePosition();
 		void DebugCollisionResponse(CollisionResults_C2O<T>& collsionResult);
@@ -489,6 +503,88 @@ void Lyra::Cloth<T>::CollisionDetectWithSelf()
 }
 
 template<typename T>
+void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_C2O<T>>& edge2Edges, T fricationFactor, T dampingFactor)
+{
+	for (auto& edge : edge2Edges) {
+
+		auto& cp0 = edge.clothEdge0.p0;
+		auto& cp1 = edge.clothEdge0.p1;
+
+		auto& op0 = edge.objectEdge0.p0;
+		auto& op1 = edge.objectEdge0.p1;
+
+		vec3<T> v0 = cp1->position - cp0->position;
+		glm::vec<3, T> v1Tmp = op1->position - op0->position;
+		vec3<T> v1(v1Tmp.x, v1Tmp.y, v1Tmp.z);
+
+		vec3<T> normal = v0.cross(v1).normalized();
+		/////////////////////v0顶点的响应/////////////////////////////
+		vec3<T>& p0v = cp0->velocity;
+		//法线速度
+		vec3<T> p0vn = p0v.dot(normal) * normal;
+		//切线速度
+		vec3<T> p0vt = p0v - p0vn;
+		if (p0vt.norm() >= fricationFactor * p0vn.norm())
+			p0v = p0vt - fricationFactor * p0vn.norm() * p0vt.normalized()
+			- dampingFactor * p0vn;
+		else
+			p0v = -dampingFactor * p0vn;
+		/////////////////////v1顶点的响应/////////////////////////////
+		vec3<T> & p1v = cp1->velocity;
+		//法线速度
+		vec3<T> p1vn = p1v.dot(normal) * normal;
+		//切线速度
+		vec3<T> p1vt = p1v - p1vn;
+		if (p1vt.norm() >= fricationFactor * p1vn.norm())
+			p1v = p1vt - fricationFactor * p1vn.norm() * p1vt.normalized()
+			- dampingFactor * p1vn;
+		else
+			p1v = -dampingFactor * p1vn;
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::SimplePoint2TriangleResponseWithRigidbody(std::vector<Vertex2Triangle_C2O<T>>& v2Triangles, T fricationFactor, T dampingFactor)
+{
+	for(auto& v2t:v2Triangles){
+		vec3<T>& v = v2t.v0->velocity;
+
+		glm::vec<3, T> t0Pos = v2t.t0->position;
+		glm::vec<3, T> t1Pos = v2t.t1->position;
+		glm::vec<3, T> t2Pos = v2t.t2->position;
+
+		glm::vec<3, T> t01Pos = t1Pos - t0Pos;
+		glm::vec<3, T> t02Pos = t2Pos - t0Pos;
+
+		glm::vec<3, T> normalTmp = glm::normalize(glm::cross(t01Pos, t02Pos));
+
+		vec3<T> normal(normalTmp.x, normalTmp.y, normalTmp.z);
+		//法线速度
+		vec3<T> vn = v.dot(normal) * normal;
+		//切线速度
+		vec3<T> vt = v - vn;
+		if (vt.norm() >= fricationFactor * vn.norm())
+			v = vt - fricationFactor * vn.norm() * vt.normalized()
+			- dampingFactor * vn;
+		else
+			v = -dampingFactor * vn;
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::SimpleCollisionResponseWithRigidbody(CollisionResults_C2O<T>& collsionResult,T fricationFactor, T dampingFactor)
+{
+	auto& edgeResults = collsionResult.edge2Edge;
+	auto& v2TriangleResults = collsionResult.vertex2Triangle;
+	auto& v2TriangleResults_ = collsionResult.vertex2Triangle_;
+
+	//对v2TriangleResult_暂且不做响应
+	SimpleEdge2EdgeResponseWithRigidbody(edgeResults, fricationFactor, dampingFactor);
+	SimplePoint2TriangleResponseWithRigidbody(v2TriangleResults, fricationFactor, dampingFactor);
+
+}
+
+template<typename T>
 void Lyra::Cloth<T>::DebugCollisionResponse(CollisionResults_C2O<T>& collsionResult)
 {
 	auto& edgeResults = collsionResult.edge2Edge;
@@ -506,11 +602,11 @@ void Lyra::Cloth<T>::DebugCollisionResponse(CollisionResults_C2O<T>& collsionRes
 		v2t.v0->isCollide = true;
 	}
 
-	/*for (auto& v2t_ : v2TriangleResults_) {
+	for (auto& v2t_ : v2TriangleResults_) {
 		v2t_.t0->isCollide = true;
 		v2t_.t1->isCollide = true;
 		v2t_.t2->isCollide = true;
-	}*/
+	}
 }
 
 template<typename T>
@@ -527,6 +623,10 @@ void Lyra::Cloth<T>::DebugUpdatePosition()
 template<typename T>
 void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 {
+
+	T friction = patches[0]->Parms().frictionFactorForObject;
+	T damping = patches[0]->Parms().dampingFactorForObject;
+
 	//ApplyInternalForce();
 	ApplyExternalForce();
 
@@ -535,7 +635,7 @@ void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 
 	if (parms.enableCollisionDetect) {
 		UpdatePesudoPosition();
-		BuildPatchBVH(1);
+		BuildPatchBVH(1, parms.bvhShader, false);
 		//printf_s("%d %d\n", objectBvh->Fragments().size(), objectBvh->FlatBVHTree().size());
 		CollisionDetectWithRigidbody(objectBvh, collisionResults_C2O);
 
@@ -544,11 +644,12 @@ void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 			/*printf_s("%d %d %d\n", collisionResults_C2O.edge2Edge.size(),
 				collisionResults_C2O.vertex2Triangle.size(),
 				collisionResults_C2O.vertex2Triangle_.size());*/
-			DebugCollisionResponse(collisionResults_C2O);
+			//DebugCollisionResponse(collisionResults_C2O);
+			SimpleCollisionResponseWithRigidbody(collisionResults_C2O, friction, damping);
 		}
 	}
-	DebugUpdatePosition();
-		//UpdatePosition();
+	//DebugUpdatePosition();
+		UpdatePosition();
 	
 	//BuildPatchBVH(1);
 	////ApplyInternalForce();

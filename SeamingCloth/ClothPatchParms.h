@@ -76,6 +76,9 @@ namespace Lyra
 
 		bool enableCollisionDetect;
 
+		T frictionFactorForObject;
+		T dampingFactorForObject;
+
 		ClothPatchParms() { alpha = 3. / 4;  }
 
 		ClothPatchParms<T> &operator = (ClothPatchParms<T> &parms)
@@ -113,6 +116,8 @@ namespace Lyra
 
 			enableCollisionDetect = parms.enableCollisionDetect;
 
+			frictionFactorForObject = parms.frictionFactorForObject;
+			dampingFactorForObject = parms.dampingFactorForObject;
 			return *this;
 		}
 	};

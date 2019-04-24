@@ -64,6 +64,11 @@ namespace Lyra
 
 		void GlDraw(Shader<T> &shader, bool lineMode);
 
+		void GlDrawBvh(Camera<T>& camera)
+		{
+			clothBvh.GlDraw(camera);
+		}
+
 		void Rendering(std::vector<Particle<T>> &particles,gph::Camera<T> &camera, bool lineMode);
 
 		/*Simulation Functions*/
@@ -616,6 +621,11 @@ void Lyra::ClothPatch<T>::BuildBVH(uint32 leafSize, shader_sp<T> shader, bool dr
 	clothBvh.ReBuild(trianglePatches, leafSize, ClothBvhCategory::CLOTH_BVH_PRE, shader, draw);
 	//clothBvhPost.ReBuild(trianglePatches, leafSize, ClothBvhCategory::CLOTH_BVH_POST, shader, draw);
 	//clothBvh.Build(trianglePatches, leafSize, shader, draw);
+
+	if (draw) {
+		clothBvh.GlBind();
+		//clothBvhPost.GlBind();
+	}
 }
 
 template<typename T>

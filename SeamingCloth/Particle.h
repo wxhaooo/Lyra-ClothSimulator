@@ -25,12 +25,23 @@ namespace Lyra
 		vec2<T> planeCoordinate;
 		//t时刻的位置
 		vec3<T> position;
+		//t-\delta t时刻的位置
 		vec3<T> prePosition;
+		//t+\delta t时刻的位置
 		vec3<T> pseudoPosition;
+		//t时刻的速度
 		vec3<T> velocity;
-		vec3<T> acceleration;
-		vec3<T> preAccleration;
+		//t-\delta t时刻的速度
+		vec3<T> preVelocity;
+		//t+\delta t时刻的速度
 		vec3<T> pseudoVelocity;
+		//t时刻的加速度
+		vec3<T> acceleration;
+		//t-\delta t时刻的加速度
+		vec3<T> preAccleration;
+		//t+\delta t时刻的加速度
+		vec3<T> pseudoAccleration;
+		
 
 		Particle() = default;
 		~Particle() = default;
@@ -63,14 +74,19 @@ template<typename T>
 Lyra::Particle<T>::Particle(vec2<T> &planeCoord, vec3<T> &worldPos, T mass, bool mv)
 {
 	planeCoordinate = planeCoord;
+
 	position = worldPos;
 	prePosition = worldPos;
 	pseudoPosition = worldPos;
-	velocity = vec3<T>(0., 0., 0.);
-	acceleration = vec3<T>(0., 0., 0.);
-	preAccleration = vec3<T>(0., 0., 0.);
-	pseudoVelocity = vec3<T>(0., 0., 0.);
 
+	velocity.setZero();
+	preVelocity.setZero();
+	pseudoVelocity.setZero();
+
+	acceleration.setZero();
+	preAccleration.setZero();
+	pseudoAccleration.setZero();
+	
 	movable = mv;
 	isCollide = false;
 

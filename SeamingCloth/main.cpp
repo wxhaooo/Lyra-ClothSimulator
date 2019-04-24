@@ -25,6 +25,7 @@
 */
 
 //live share test
+//using namespace Lyra;
 
 using seamingPair = Lyra::SeamingPair;
 namespace gph = GraphicHelper;
@@ -165,7 +166,7 @@ int main()
 	{
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
-		parms0.name = "Square_Back_y=5.obj";
+		parms0.name = "test1.obj";
 		//parms0.name = "Square_Front.obj";
 		parms0.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
@@ -190,6 +191,9 @@ int main()
 		parms0.stretchScaleUDir = 1.f;
 		parms0.stretchScaleVDir = 1.f;
 
+		parms0.frictionFactorForObject = 0.3f;
+		parms0.dampingFactorForObject = 0.2f;
+
 		/*parms0.stretchingFactor = 5000.f;
 		parms0.shearingFactor = 500.f;
 		parms0.bendingFactor = 0.01f;
@@ -213,7 +217,7 @@ int main()
 	{
 		parms1.path = "./patch/";
 		//parms1.name = "UvObj_texture_back.obj";
-		parms1.name = "UvObj_Origin_Back_15.obj";
+		parms1.name = "Square_Back_y=5.obj";
 		//parms1.name = "Square_Back.obj";
 		parms1.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), model_1_FragmentShaderPath.c_str());
 		//parms1.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
@@ -424,14 +428,14 @@ int main()
 		clothParms.enableGravity = true;
 		clothParms.enableWind = false;
 
-		clothParms.planeForceSwitch.enableStretchForce = false;
-		clothParms.planeForceSwitch.enableShearForce = false;
+		clothParms.planeForceSwitch.enableStretchForce = true;
+		clothParms.planeForceSwitch.enableShearForce = true;
 		//没有damping的话会导致拉伸的时候后面的点停不下来
-		clothParms.planeForceSwitch.enableDampingStretchForce = false;
+		clothParms.planeForceSwitch.enableDampingStretchForce = true;
 		clothParms.planeForceSwitch.enableDampingShearForce = false;
 
-		clothParms.spaceForceSwitch.enableBendingForce = false;
-		clothParms.spaceForceSwitch.enableDampingBendingForce = false;
+		clothParms.spaceForceSwitch.enableBendingForce = true;
+		clothParms.spaceForceSwitch.enableDampingBendingForce = true;
 
 		//for seaming
 		clothParms.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), seamingFragmentShaderPath.c_str());
@@ -439,6 +443,8 @@ int main()
 
 		//collision detect
 		clothParms.enableCollisionDetect = true;
+
+		clothParms.bvhShader = bvhShader;
 	}
 
 	clothPatch0->LoadPatch(parms0);
@@ -449,16 +455,42 @@ int main()
 	cloth->AddSeamingInfo(seamingInfo1);
 	cloth->Integrate(clothParms);
 
-	/*Lyra::ClothBVH<float> clothBvh;
-	clothBvh.Build(clothPatch0, 1, bvhShader);
+	/*Lyra::ClothBVH<Type> clothBvh;
+	clothBvh.Build(clothPatch0->TrianglePatches(), 1,
+		Lyra::ClothBvhCategory::CLOTH_BVH_PRE, bvhShader, true);
 
 	clothBvh.GlBind();*/
+
+	//Lyra::VertexPointer<Type> v0 = std::make_shared<Lyra::Vertex<Type>>();
+	//Lyra::VertexPointer<Type> v1 = std::make_shared<Lyra::Vertex<Type>>();
+	//Lyra::VertexPointer<Type> v2 = std::make_shared<Lyra::Vertex<Type>>();
+
+	////Lyra::randomDist<Type> dist(-10., 10.);
+	//Lyra::randomDist_i dist(0, 5);
+	//
+
+	//v0->position = glm::vec3(dist(Lyra::randomEngine), dist(Lyra::randomEngine), dist(Lyra::randomEngine));
+	//v1->position = glm::vec3(dist(Lyra::randomEngine), dist(Lyra::randomEngine), dist(Lyra::randomEngine));
+	//v2->position = glm::vec3(dist(Lyra::randomEngine), dist(Lyra::randomEngine), dist(Lyra::randomEngine));
+
+	//std::cout << v0->position.x<<" " << v0->position.y <<" "<< v0->position.z << "\n";
+	//std::cout << v1->position.x << " " << v1->position.y << " " << v1->position.z << "\n";
+	//std::cout << v2->position.x << " " << v2->position.y << " " << v2->position.z << "\n";
+	//Lyra::BBoxObjTriangle<Type> objTriangle(v0, v1, v2);
+	//Lyra::BBox<Type> bBox = objTriangle.GetBBox(bvhShader, true);
+
+	//std::cout << bBox.minCorner << "\n";
+	//std::cout << bBox.maxCorner << "\n";
+
+	//objTriangle.GlBind();
+
+	//bBox.GlBind();
 
 	cloth->GlBind();
 
 	body->GlBind();
 
-	//objBVH->GlBind();
+	objBVH->GlBind();
 
 	camera.Init(setting, modelMat);
 
@@ -475,6 +507,10 @@ int main()
 		viewMat = camera.GetViewMatrix();
 		projectionMat = camera.GetProjectMatrix();
 
+		/*bBox.GlDraw(camera);
+
+		objTriangle.GlDraw();*/
+
 		cloth->GlUpdate();
 		cloth->Simulate(objBVH);
 		//cloth->DebugSimulate(bvhShader);
@@ -484,6 +520,8 @@ int main()
 		bodyShader.use();
 		bodyShader.setMat4("MVP", MVP);
 		body->GlDrawModel(bodyShader, lineMode);
+
+		//cloth->GlDrawBvh(camera);
 
 		if (saveMesh) {
 			if (frame % savedPerFrames == 0) {
@@ -495,8 +533,8 @@ int main()
 			}
 		}
 
-		//bvh->DrawExternalBBox(camera);
-		//bvh->DrawSubBBoxs(camera);
+		/*bvh->DrawExternalBBox(camera);
+		bvh->DrawSubBBoxs(camera);*/
 		//objBVH->GlDraw(camera);
 
 		//clothBvh.GlDraw(camera);
@@ -504,6 +542,8 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
+		frame++;
+		std::cout << frame << "\n";
 		//system("pause");
 	}
 	glfwTerminate();
