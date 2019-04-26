@@ -90,8 +90,8 @@ void Lyra::AdjacentTrianglePatch<T>::ExplicitBendingForce()
 	vec3<T> n1 = N1.normalized(); vec3<T> n2 = N2.normalized();
 	//这里可能得到-0，结果就得到sqrt()得到NaN，所以加个abs()
 	//判断是不是NaN的方法,if(A!=A){......}
-	//T sinHalf = sqrt(std::abs((1.0f - n1.dot(n2)) / 2.0f));
-	T sinHalf = (std::sin(SafeACos(n1.dot(n2))) - std::sin(restAngle));
+	T sinHalf = sqrt(std::abs((1.0f - n1.dot(n2)) / 2.0f));
+	//T sinHalf = (std::sin(SafeACos(n1.dot(n2))) - std::sin(restAngle));
 	if (!IsZero(sinHalf)) {
 		if (n1.cross(n2).dot(E.normalized()) < 0) { sinHalf = -sinHalf; }
 		T bendFactor = bendingCoefficent * std::pow(El, 2)*sinHalf / (N1l2 + N2l2);

@@ -331,14 +331,14 @@ void Lyra::ClothBVH<T>::CollisionWithObjBVH(ObjectBVH<T>& objectBVH, CollisionRe
 	//system("pause");
 
 	//±©Á¦¼ì²â
-	for (auto& clothFrag : fragments) {
+	/*for (auto& clothFrag : fragments) {
 		for (auto& objectFrag : objectFragments) {
 			Edge2EdgeCollisionDetect(clothFrag, objectFrag, collisionResult);
 			Point2TriangleCollisionDetect(clothFrag, objectFrag, collisionResult);
 		}
-	}
+	}*/
 
-	//BVHCollisionDetect(flatBvhTree, objectFlatBvhTree, fragments, objectFragments, collisionResult);
+	BVHCollisionDetect(flatBvhTree, objectFlatBvhTree, fragments, objectFragments, collisionResult);
 }
 
 template<typename T>
@@ -482,11 +482,11 @@ void Lyra::ClothBVH<T>::Edge2EdgeCollisionDetect(BBoxClothTriangle<T>& clothTria
 
 	clothEdges.push_back(ClothEdge<T>(p0, p1));
 	clothEdges.push_back(ClothEdge<T>(p1, p2));
-	clothEdges.push_back(ClothEdge<T>(p2, p1));
+	clothEdges.push_back(ClothEdge<T>(p2, p0));
 
 	objectEdges.push_back(ObjectEdge<T>(v0, v1));
 	objectEdges.push_back(ObjectEdge<T>(v1, v2));
-	objectEdges.push_back(ObjectEdge<T>(v2, v1));
+	objectEdges.push_back(ObjectEdge<T>(v2, v0));
 
 	for (uint32 i = 0; i < clothEdges.size(); i++) {
 		for (uint32 j = 0; j < objectEdges.size(); j++) {

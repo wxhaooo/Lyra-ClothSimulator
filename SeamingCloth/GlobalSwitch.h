@@ -4,7 +4,7 @@
 
 constexpr float delta_t = 0.001f;
 
-float FPS = 25.f;
+float FPS = 60.f;
 
 float SPF = 1.f / FPS;
 

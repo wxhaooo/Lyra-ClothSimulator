@@ -167,7 +167,7 @@ int main()
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
 		//parms0.name = "square4.obj";
-		parms0.name = "test3.obj";
+		parms0.name = "test6.obj";
 		//parms0.name = "Square_Front.obj";
 		parms0.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
@@ -178,30 +178,30 @@ int main()
 		///scale小了会导致plane force变小，结果系统更稳定，需要确定一个合适的scale
 		///这个scale理论上是非线性的，现在用线性的替代，必然导致force计算出现问题[19-04-11]
 		parms0.scale = 150.f;
-		parms0.density = 1.0f;
+		parms0.density = 0.228f;
 		///刚性强会使solver崩掉，刚性不够则没法缝合，
 		///@(todo_1)为什么刚性弱无法缝合？？？
 		///@(do_1)问题解决，可以缝合，积分方法问题
-		parms0.stretchingFactor = 6000.f;
-		parms0.shearingFactor = 500.f;
-		parms0.bendingFactor = 0.01e-3;
+		parms0.stretchingFactor = 151.503906f;
+		parms0.shearingFactor = 30.250183f;
+		parms0.bendingFactor = 117.070122e-6f;
 		///damping stretch引起的问题，可能是solver不能解刚性过大的系统
-		parms0.dampingStretchFactor = 0.1f;
-		parms0.dampingShearFactor = 0.1f;
-		parms0.dampingBendingFactor = 0.01e-4;
+		parms0.dampingStretchFactor = 0.2f;
+		parms0.dampingShearFactor = 0.2f;
+		parms0.dampingBendingFactor = 2 * 117.070122e-7f;
 		parms0.stretchScaleUDir = 1.f;
 		parms0.stretchScaleVDir = 1.f;
 
-		parms0.frictionFactorForObject = 0.3f;
-		parms0.dampingFactorForObject = 0.2f;
+		parms0.frictionFactorForObject = 0.0f;
+		parms0.dampingFactorForObject = 0.1f;
 
 		parms0.planeForceSwitch.enableStretchForce = true;
 		parms0.planeForceSwitch.enableShearForce = true;
-		parms0.planeForceSwitch.enableDampingStretchForce = true;
-		parms0.planeForceSwitch.enableDampingShearForce = true;
+		parms0.planeForceSwitch.enableDampingStretchForce = false;
+		parms0.planeForceSwitch.enableDampingShearForce = false;
 
-		parms0.spaceForceSwitch.enableBendingForce = true;
-		parms0.spaceForceSwitch.enableDampingBendingForce = true;
+		parms0.spaceForceSwitch.enableBendingForce = false;
+		parms0.spaceForceSwitch.enableDampingBendingForce = false;
 
 		parms0.enableCollisionDetect = true;
 	}
@@ -423,7 +423,7 @@ int main()
 		clothParms.enableSeaming = false;
 
 		//collision detect
-		clothParms.enableCollisionDetect = false;
+		clothParms.enableCollisionDetect = true;
 
 		clothParms.bvhShader = bvhShader;
 	}
@@ -500,7 +500,7 @@ int main()
 
 		bodyShader.use();
 		bodyShader.setMat4("MVP", MVP);
-		//body->GlDrawModel(bodyShader, lineMode);
+		body->GlDrawModel(bodyShader, lineMode);
 
 		//cloth->GlDrawBvh(camera);
 
@@ -524,7 +524,7 @@ int main()
 		glfwPollEvents();
 
 		frame++;
-		std::cout << frame << "\n";
+		//std::cout << frame << "\n";
 		//system("pause");
 	}
 	glfwTerminate();

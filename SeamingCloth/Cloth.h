@@ -394,7 +394,7 @@ template<typename T>
 void Lyra::Cloth<T>::ApplyGravity()
 {
 	for (auto &p : particles) {
-		p.ApplyForce(parms.gravity);
+		p.ApplyGravity(parms.gravity);
 	}
 }
 
@@ -537,6 +537,8 @@ template<typename T>
 void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_C2O<T>>& edge2Edges, T fricationFactor, T dampingFactor)
 {
 	//利用middle velocity 计算 pseudo velocity
+	//每个particle只响应一次
+	std::set<particle_pt<T>> tmp;
 	for (auto& edge : edge2Edges) {
 
 		auto& cp0 = edge.clothEdge0.p0;
@@ -549,42 +551,69 @@ void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_
 		glm::vec<3, T> v1Tmp = op1->position - op0->position;
 		vec3<T> v1(v1Tmp.x, v1Tmp.y, v1Tmp.z);
 
+		//std::cout << v0.dot(v1) << "\n";
+
 		vec3<T> normal = v0.cross(v1).normalized();
 		/////////////////////v0顶点的响应/////////////////////////////
-		vec3<T> p0v = cp0->middleVelocity;
-		//法线速度
-		vec3<T> p0vn = p0v.dot(normal) * normal;
-		//切线速度
-		vec3<T> p0vt = p0v - p0vn;
-		if (p0vt.norm() >= fricationFactor * p0vn.norm())
-			cp0->pseudoVelocity = p0vt - fricationFactor * p0vn.norm() * p0vt.normalized()
-			- dampingFactor * p0vn;
-		else
-			cp0->pseudoVelocity = -dampingFactor * p0vn;
+		if (tmp.find(cp0) != tmp.end())
+		{
+			vec3<T> p0v = cp0->middleVelocity;
+			//法线速度
+			vec3<T> p0vn = p0v.dot(normal) * normal;
+				//切线速度
+			vec3<T> p0vt = (p0v - p0vn);
+			//std::cout << p0vt.norm() << "\n";
+			if (p0vt.norm() >= fricationFactor * p0vn.norm()) {
+				//std::cout << "2333\n";
+				cp0->pseudoVelocity = p0vt - fricationFactor * p0vn.norm() * p0vt.normalized()
+					- dampingFactor * p0vn;
+			}
+			else
+				cp0->pseudoVelocity = -dampingFactor * p0vn;
 
-		cp0->pseudoPosition = cp0->position + cp0->pseudoVelocity * parms.delta_t;
+			cp0->pseudoPosition = cp0->position + cp0->pseudoVelocity * parms.delta_t;
+		}
+		tmp.insert(cp0);
 		/////////////////////v1顶点的响应/////////////////////////////
-		vec3<T> p1v = cp1->middleVelocity;
-		//法线速度
-		vec3<T> p1vn = p1v.dot(normal) * normal;
-		//切线速度
-		vec3<T> p1vt = p1v - p1vn;
-		if (p1vt.norm() >= fricationFactor * p1vn.norm())
-			cp1->pseudoVelocity = p1vt - fricationFactor * p1vn.norm() * p1vt.normalized()
-			- dampingFactor * p1vn;
-		else
-			cp1->pseudoVelocity = -dampingFactor * p1vn;
+		if (tmp.find(cp1) != tmp.end()) {
+			vec3<T> p1v = cp1->middleVelocity;
+			//法线速度
+			vec3<T> p1vn = p1v.dot(normal) * normal;
+			/*if (p1vn.dot(normal) > 0)
+				std::cout << "Emmmm\n";*/
+				//切线速度
+			vec3<T> p1vt = (p1v - p1vn);
 
-		cp1->pseudoPosition = cp1->position + cp1->pseudoVelocity * parms.delta_t;
+			//std::cout << p1vt.norm() << "\n";
+			if (p1vt.norm() >= fricationFactor * p1vn.norm()) {
+				//std::cout << "2333\n";
+				cp1->pseudoVelocity = p1vt - fricationFactor * p1vn.norm() * p1vt.normalized()
+					- dampingFactor * p1vn;
+			}
+			else
+				cp1->pseudoVelocity = -dampingFactor * p1vn;
+
+			cp1->pseudoPosition = cp1->position + cp1->pseudoVelocity * parms.delta_t;
+		}
+		tmp.insert(cp1);
 	}
+
+	//std::cout << tmp.size() << "\n";
 }
 
 template<typename T>
 void Lyra::Cloth<T>::SimplePoint2TriangleResponseWithRigidbody(std::vector<Vertex2Triangle_C2O<T>>& v2Triangles, T fricationFactor, T dampingFactor)
 {
 	//利用 middle velocity 计算 pseudo velocity
+	//每个particle只响应一次
+	std::set<particle_pt<T>> tmp;
 	for(auto& v2t:v2Triangles){
 		vec3<T> v = v2t.v0->middleVelocity;
+
+		if (tmp.find(v2t.v0) != tmp.end())
+			continue;
+	
+		tmp.insert(v2t.v0);
 
 		glm::vec<3, T> t0Pos = v2t.t0->position;
 		glm::vec<3, T> t1Pos = v2t.t1->position;
@@ -598,16 +627,23 @@ void Lyra::Cloth<T>::SimplePoint2TriangleResponseWithRigidbody(std::vector<Verte
 		vec3<T> normal(normalTmp.x, normalTmp.y, normalTmp.z);
 		//法线速度
 		vec3<T> vn = v.dot(normal) * normal;
+		/*if (vn.dot(normal) > 0)
+			std::cout << "Emmmm\n";*/
 		//切线速度
-		vec3<T> vt = v - vn;
-		if (vt.norm() >= fricationFactor * vn.norm())
+		vec3<T> vt = (v - vn);
+		//std::cout << vt.norm() << "\n";
+		if (vt.norm() >= fricationFactor * vn.norm()) {
+			//std::cout << "2333\n";
 			v2t.v0->pseudoVelocity = vt - fricationFactor * vn.norm() * vt.normalized()
-			- dampingFactor * vn;
+				- dampingFactor * vn;
+		}
 		else
 			v2t.v0->pseudoVelocity = -dampingFactor * vn;
 
 		v2t.v0->pseudoPosition = v2t.v0->position + v2t.v0->pseudoVelocity * parms.delta_t;
 	}
+
+	//std::cout << tmp.size() << "\n";
 }
 
 template<typename T>

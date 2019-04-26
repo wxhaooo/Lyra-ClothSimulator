@@ -49,6 +49,8 @@ namespace Lyra
 
 		Particle(vec2<T> &planeCoord, vec3<T> &wordPos, T mass = 1.0f, bool mv = true);
 
+		void ApplyGravity(vec3<T> acc);
+
 		void AdvanceStep();
 
 		void ApplyForce(vec3<T> force);
@@ -128,6 +130,12 @@ void Lyra::Particle<T>::AdvanceStep()
 	preAccleration = acceleration;
 	acceleration = pseudoAccleration;
 	pseudoAccleration.setZero();
+}
+
+template<typename T>
+void Lyra::Particle<T>::ApplyGravity(vec3<T> acc)
+{
+	pseudoAccleration += acc;
 }
 
 template<typename T>

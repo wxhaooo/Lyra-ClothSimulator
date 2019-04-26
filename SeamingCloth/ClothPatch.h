@@ -261,6 +261,7 @@ void Lyra::ClothPatch<T>::RevisedMass()
 	auto &indices = mesh.Indices();
 
 	std::vector<T> triangleArea;
+	T clothArea = 0.;
 	for (int i = 0; i < indices.size(); i += 3) {
 
 		uint32 ind1 = indices[i];
@@ -287,11 +288,19 @@ void Lyra::ClothPatch<T>::RevisedMass()
 
 		T area = std::sqrt(p*(p - l21)*(p - l31)*(p - l23));
 
+		clothArea += area;
+
+		//std::cout << area << "\n";
+
 		triangleArea.push_back(area);
 	}
 
+	/*std::cout << clothArea << "\n";
+	system("pause");*/
+
 	int adjTriangleNum = 0;
 	std::vector<uint32> triangleIndexTmp;
+	T clothMass = 0.;
 	for (uint32 i = 0; i < particles.size(); i++) {
 		adjTriangleNum = 0;
 		//用index确定是哪些三角形
@@ -309,7 +318,8 @@ void Lyra::ClothPatch<T>::RevisedMass()
 		}
 
 		//质量如果过小就把它设定为固定值
-		particles[i].mass = 1.0;/*totalMass / 3.f;*/
+		particles[i].mass = /*1.0;*/totalMass / 3.f;
+		clothMass += particles[i].mass;
 
 		//std::cout << particles[i].mass << "\n";
 
@@ -317,6 +327,9 @@ void Lyra::ClothPatch<T>::RevisedMass()
 			std::cerr << "particle's mass is Zero!\n";
 		}
 	}
+
+	std::cout << clothMass << "\n";
+	//system("pause");
 }
 
 template<typename T>

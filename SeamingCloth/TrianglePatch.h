@@ -111,7 +111,7 @@ Lyra::TrianglePatch<T>::TrianglePatch(particle_pt<T> xx1, particle_pt<T> xx2, pa
 
 	//std::cout << matTmp << "\n";
 
-	mat2<T> Sigma = mat2<T>::Zero();
+	/*mat2<T> Sigma = mat2<T>::Zero();
 	mat2<T> SigmaT;
 
 	auto U = matTmp.bdcSvd(Eigen::ComputeFullU).matrixU();
@@ -133,9 +133,9 @@ Lyra::TrianglePatch<T>::TrianglePatch(particle_pt<T> xx1, particle_pt<T> xx2, pa
 
 	SigmaT = Sigma.transpose();
 
-	theInverse = V * SigmaT * U.transpose();
+	theInverse = V * SigmaT * U.transpose();*/
 
-	//theInverse = matTmp.inverse();
+	theInverse = matTmp.inverse();
 	
 	//std::cout << theInverse << "\n\n";
 
