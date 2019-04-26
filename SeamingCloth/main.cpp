@@ -160,48 +160,40 @@ int main()
 	Lyra::SeamingInfo<Type> seamingInfo1;
 	Lyra::ClothParms<Type> clothParms;
 
-	std::vector<uint32> stickPoints0 = { /*7,8,9*/ };
+	std::vector<uint32> stickPoints0 = { /*134,235,208,209*/ };
 	std::vector<uint32> stickPoints1 = { /*4,5,6*/ };
 	//patch0 Parms
 	{
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
-		parms0.name = "test1.obj";
+		//parms0.name = "square4.obj";
+		parms0.name = "test3.obj";
 		//parms0.name = "Square_Front.obj";
 		parms0.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
 		parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE;
+		parms0.orientation = Lyra::ClothPatchOrientation::LYRA_PATCH_XZ;
 		//parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE;
 		parms0.stickPoints.reset(&(stickPoints0));
 		///scale小了会导致plane force变小，结果系统更稳定，需要确定一个合适的scale
 		///这个scale理论上是非线性的，现在用线性的替代，必然导致force计算出现问题[19-04-11]
 		parms0.scale = 150.f;
 		parms0.density = 1.0f;
-
 		///刚性强会使solver崩掉，刚性不够则没法缝合，
 		///@(todo_1)为什么刚性弱无法缝合？？？
 		///@(do_1)问题解决，可以缝合，积分方法问题
-		parms0.stretchingFactor = 5000.f;
+		parms0.stretchingFactor = 6000.f;
 		parms0.shearingFactor = 500.f;
-		parms0.bendingFactor = 60.237942e-6;
+		parms0.bendingFactor = 0.01e-3;
 		///damping stretch引起的问题，可能是solver不能解刚性过大的系统
-		parms0.dampingStretchFactor = 0.05f;
+		parms0.dampingStretchFactor = 0.1f;
 		parms0.dampingShearFactor = 0.1f;
-		parms0.dampingBendingFactor = 0.0001f;
+		parms0.dampingBendingFactor = 0.01e-4;
 		parms0.stretchScaleUDir = 1.f;
 		parms0.stretchScaleVDir = 1.f;
 
 		parms0.frictionFactorForObject = 0.3f;
 		parms0.dampingFactorForObject = 0.2f;
-
-		/*parms0.stretchingFactor = 5000.f;
-		parms0.shearingFactor = 500.f;
-		parms0.bendingFactor = 0.01f;
-		parms0.dampingStretchFactor = 1.f / 25;
-		parms0.dampingShearFactor = 1.f / 50;
-		parms0.dampingBendingFactor = 0.0001f;
-		parms0.stretchScaleUDir = 1.f;
-		parms0.stretchScaleVDir = 1.f;*/
 
 		parms0.planeForceSwitch.enableStretchForce = true;
 		parms0.planeForceSwitch.enableShearForce = true;
@@ -239,15 +231,6 @@ int main()
 		parms1.dampingBendingFactor = 0.0001f;
 		parms1.stretchScaleUDir = 1.f;
 		parms1.stretchScaleVDir = 1.f;
-
-		/*parms1.stretchingFactor = 5000.f;
-		parms1.shearingFactor = 500.f;
-		parms1.bendingFactor = 0.01f;
-		parms1.dampingStretchFactor = 1.f / 25;
-		parms1.dampingShearFactor = 1.f / 50;
-		parms1.dampingBendingFactor = 0.0001f;
-		parms1.stretchScaleUDir = 1.f;
-		parms1.stretchScaleVDir = 1.f;*/
 
 		parms1.planeForceSwitch.enableStretchForce = true;
 		parms1.planeForceSwitch.enableShearForce = true;
@@ -409,9 +392,7 @@ int main()
 		clothParms.windParms.windVelocity = Lyra::vec3<Type>(0.f, 0.f, 3.f);
 		clothParms.windParms.windCod = 1.;
 		clothParms.windParms.windDensity = 0.5;
-		////废弃的seaming method
-		//clothParms.seamingForceFactor = 100.f;
-		//clothParms.seamingThreshold = 0.1f;
+		
 		//new seaming method
 		//这种方法需要快速缝合，因为damping掉了内力的加速度，使的出现了一些artifacts
 		//force由帧率确定，指定大概多少帧的时候基本满足缝合,这个值确定什么时间点缝合,一般在后半段，前半段不要设置
@@ -432,7 +413,7 @@ int main()
 		clothParms.planeForceSwitch.enableShearForce = true;
 		//没有damping的话会导致拉伸的时候后面的点停不下来
 		clothParms.planeForceSwitch.enableDampingStretchForce = true;
-		clothParms.planeForceSwitch.enableDampingShearForce = false;
+		clothParms.planeForceSwitch.enableDampingShearForce = true;
 
 		clothParms.spaceForceSwitch.enableBendingForce = true;
 		clothParms.spaceForceSwitch.enableDampingBendingForce = true;
@@ -442,7 +423,7 @@ int main()
 		clothParms.enableSeaming = false;
 
 		//collision detect
-		clothParms.enableCollisionDetect = true;
+		clothParms.enableCollisionDetect = false;
 
 		clothParms.bvhShader = bvhShader;
 	}
@@ -519,7 +500,7 @@ int main()
 
 		bodyShader.use();
 		bodyShader.setMat4("MVP", MVP);
-		body->GlDrawModel(bodyShader, lineMode);
+		//body->GlDrawModel(bodyShader, lineMode);
 
 		//cloth->GlDrawBvh(camera);
 

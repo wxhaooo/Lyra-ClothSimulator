@@ -12,6 +12,7 @@ namespace Lyra
 	template<typename T> struct ClothPatchParms;
 	enum ClothPatchMode;
 	enum ClothPatchInitState;
+	enum ClothPatchOrientation;
 }
 
 enum Lyra::ClothPatchInitState
@@ -24,6 +25,13 @@ enum Lyra::ClothPatchMode
 {
 	LYRA_CLOTH_PATCH_SINGLE,
 	LYRA_CLOTH_PATCH_SEAMING
+};
+
+enum Lyra::ClothPatchOrientation
+{
+	LYRA_PATCH_XY,
+	LYRA_PATCH_XZ,
+	LYRA_PATCH_YZ
 };
 
 namespace Lyra
@@ -61,8 +69,8 @@ namespace Lyra
 		vector_sp<uint32> stickPoints;
 		//patch的模式可以不设置，没有影响
 		ClothPatchMode patchMode;
-
 		ClothPatchInitState initState;
+		ClothPatchOrientation orientation;
 
 		Shader<T> shader;
 
@@ -105,6 +113,7 @@ namespace Lyra
 
 			patchMode = parms.patchMode;
 			initState = parms.initState;
+			orientation = parms.orientation;
 
 			scale = parms.scale;
 			alpha = parms.alpha;

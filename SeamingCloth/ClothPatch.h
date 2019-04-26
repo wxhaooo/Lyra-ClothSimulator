@@ -214,19 +214,29 @@ void Lyra::ClothPatch<T>::Init(ClothPatchParms<T> &parms)
 
 		auto &vertex = vertices[i];
 
+		vec2<T> planePosTmp;
+
 		vec3<T> posTmp(vertex.position.x, vertex.position.y, vertex.position.z);
 		vec2<T> uvTmp(vertex.texureCoords.x, vertex.texureCoords.y);
 		vec2<T> uvScaleTmp = parms.scale * uvTmp;
 		vec3<T> normalTmp(vertex.normal.x, vertex.normal.y, vertex.normal.z);
-		vec2<T> planePosTmp(vertex.position.x, vertex.position.y);
+
+		if (parms.orientation == ClothPatchOrientation::LYRA_PATCH_XY)
+			planePosTmp = vec2<T>(vertex.position.x, vertex.position.y);
+		else if(parms.orientation == ClothPatchOrientation::LYRA_PATCH_XZ)
+			planePosTmp = vec2<T>(vertex.position.x, vertex.position.z);
+		else if(parms.orientation == ClothPatchOrientation::LYRA_PATCH_YZ)
+			planePosTmp = vec2<T>(vertex.position.y, vertex.position.z);
 
 		positionVec.push_back(posTmp);
 		uvCoordVec.push_back(uvTmp);
 
-		if (parms.initState == ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE)
-			particles.push_back(Particle<T>(planePosTmp, posTmp));
-		else if (parms.initState == ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE)
+		if (parms.initState == ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE) {
+				particles.push_back(Particle<T>(planePosTmp, posTmp));
+		}
+		else if (parms.initState == ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE) {
 			particles.push_back(Particle<T>(uvScaleTmp, posTmp));
+		}
 		else {
 			std::cerr << "ClothPatchInitState is not specified!\n\n";
 			system("pause");

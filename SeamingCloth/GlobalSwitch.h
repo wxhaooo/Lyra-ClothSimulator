@@ -14,7 +14,7 @@ float elapsedTime = 0.0f;
 
 int savedPerFrames = static_cast<int>(ceil(SPF / delta_t));
 
-bool saveMesh = true;
+bool saveMesh = false;
 bool saveImage = false;
 
 bool hasWind = false;

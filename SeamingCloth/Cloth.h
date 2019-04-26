@@ -156,8 +156,14 @@ namespace Lyra
 			MeshExporterSwitch exportSwitch = MESH_EXPORTER_ALL);
 
 	private:
+		void AdvanceStep();
 		void UpdatePosition();
 		void UpdatePesudoPosition();
+		void UpdateMiddleVelocityWithVelcoityVerlet();
+		void UpdatePesudoPositionWithVelocityVerlet();
+		void UpdatePesudoVelocityWithVelocityVerlet();
+		//用于cloth-cloth碰撞时用
+		void EstimateMiddleVelocity();
 		bool CheckSeamingCondition();
 		void UpdatePatches();
 		void UpdateSeamingPosition();
@@ -286,8 +292,10 @@ bool Lyra::Cloth<T>::Integrate(ClothParms<T> &parms)
 
 		//重新索引stickpoints
 		for (auto &stickPoint : *(stickPoints)) {
+
 			/*std::cout << stickPoint;*/
 			stickPoint += bias;
+			particles[stickPoint].movable = false;
 			//std::cout << " " << stickPoint << "\n";
 		}
 
@@ -341,6 +349,11 @@ void Lyra::Cloth<T>::SimulationInfo()
 		std::cout << "GRAMENT\n";
 	else
 		std::cout << "PATCH\n";
+	std::cout << "Enable Collsiion Detection: ";
+	if (parms.enableCollisionDetect)
+		std::cout << "True\n";
+	else
+		std::cout << "False\n";
 }
 
 template<typename T>
@@ -348,6 +361,24 @@ void Lyra::Cloth<T>::BuildPatchBVH(uint32 leafSize,shader_sp<T> shader,bool draw
 {
 	for (auto& patch : patches) {
 		patch->BuildBVH(leafSize, shader, draw);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::UpdatePesudoVelocityWithVelocityVerlet()
+{
+	for (auto& p : particles) {
+		if (p.movable)
+		p.UpdatePseudoVelocityWithVelocityVerlet(parms.delta_t);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::UpdatePesudoPositionWithVelocityVerlet()
+{
+	for (auto& p : particles) {
+		if (p.movable)
+		p.UpdatePseudoPositionWithVelocityVerlet(parms.delta_t);
 	}
 }
 
@@ -505,6 +536,7 @@ void Lyra::Cloth<T>::CollisionDetectWithSelf()
 template<typename T>
 void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_C2O<T>>& edge2Edges, T fricationFactor, T dampingFactor)
 {
+	//利用middle velocity 计算 pseudo velocity
 	for (auto& edge : edge2Edges) {
 
 		auto& cp0 = edge.clothEdge0.p0;
@@ -519,35 +551,40 @@ void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_
 
 		vec3<T> normal = v0.cross(v1).normalized();
 		/////////////////////v0顶点的响应/////////////////////////////
-		vec3<T>& p0v = cp0->velocity;
+		vec3<T> p0v = cp0->middleVelocity;
 		//法线速度
 		vec3<T> p0vn = p0v.dot(normal) * normal;
 		//切线速度
 		vec3<T> p0vt = p0v - p0vn;
 		if (p0vt.norm() >= fricationFactor * p0vn.norm())
-			p0v = p0vt - fricationFactor * p0vn.norm() * p0vt.normalized()
+			cp0->pseudoVelocity = p0vt - fricationFactor * p0vn.norm() * p0vt.normalized()
 			- dampingFactor * p0vn;
 		else
-			p0v = -dampingFactor * p0vn;
+			cp0->pseudoVelocity = -dampingFactor * p0vn;
+
+		cp0->pseudoPosition = cp0->position + cp0->pseudoVelocity * parms.delta_t;
 		/////////////////////v1顶点的响应/////////////////////////////
-		vec3<T> & p1v = cp1->velocity;
+		vec3<T> p1v = cp1->middleVelocity;
 		//法线速度
 		vec3<T> p1vn = p1v.dot(normal) * normal;
 		//切线速度
 		vec3<T> p1vt = p1v - p1vn;
 		if (p1vt.norm() >= fricationFactor * p1vn.norm())
-			p1v = p1vt - fricationFactor * p1vn.norm() * p1vt.normalized()
+			cp1->pseudoVelocity = p1vt - fricationFactor * p1vn.norm() * p1vt.normalized()
 			- dampingFactor * p1vn;
 		else
-			p1v = -dampingFactor * p1vn;
+			cp1->pseudoVelocity = -dampingFactor * p1vn;
+
+		cp1->pseudoPosition = cp1->position + cp1->pseudoVelocity * parms.delta_t;
 	}
 }
 
 template<typename T>
 void Lyra::Cloth<T>::SimplePoint2TriangleResponseWithRigidbody(std::vector<Vertex2Triangle_C2O<T>>& v2Triangles, T fricationFactor, T dampingFactor)
 {
+	//利用 middle velocity 计算 pseudo velocity
 	for(auto& v2t:v2Triangles){
-		vec3<T>& v = v2t.v0->velocity;
+		vec3<T> v = v2t.v0->middleVelocity;
 
 		glm::vec<3, T> t0Pos = v2t.t0->position;
 		glm::vec<3, T> t1Pos = v2t.t1->position;
@@ -564,10 +601,12 @@ void Lyra::Cloth<T>::SimplePoint2TriangleResponseWithRigidbody(std::vector<Verte
 		//切线速度
 		vec3<T> vt = v - vn;
 		if (vt.norm() >= fricationFactor * vn.norm())
-			v = vt - fricationFactor * vn.norm() * vt.normalized()
+			v2t.v0->pseudoVelocity = vt - fricationFactor * vn.norm() * vt.normalized()
 			- dampingFactor * vn;
 		else
-			v = -dampingFactor * vn;
+			v2t.v0->pseudoVelocity = -dampingFactor * vn;
+
+		v2t.v0->pseudoPosition = v2t.v0->position + v2t.v0->pseudoVelocity * parms.delta_t;
 	}
 }
 
@@ -621,35 +660,72 @@ void Lyra::Cloth<T>::DebugUpdatePosition()
 }
 
 template<typename T>
+void Lyra::Cloth<T>::EstimateMiddleVelocity()
+{
+	for (auto& p : particles) {
+		if (p.movable)
+			p.EstimateMiddleVelocity(parms.delta_t);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::AdvanceStep()
+{
+	for (auto& p : particles) {
+		if (p.movable)
+			p.AdvanceStep();
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::UpdateMiddleVelocityWithVelcoityVerlet()
+{
+	for (auto& p : particles) {
+		if(p.movable)
+		p.UpdateMiddleVelocityWithVelocityVerlet(parms.delta_t);
+	}
+}
+
+template<typename T>
 void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 {
-
 	T friction = patches[0]->Parms().frictionFactorForObject;
 	T damping = patches[0]->Parms().dampingFactorForObject;
 
-	//ApplyInternalForce();
+	//std::cout << friction << " " << damping << '\n';
+
+	/*ApplyInternalForce();
 	ApplyExternalForce();
 
-	CollisionResults_C2O<T> collisionResults_C2O;
-	CollisionResults_C2C<T> collisionResults_C2C;
+	UpdatePosition();*/
+
+	//计算t+0.5 * \delta t时刻的速度用于计算damping force
+	UpdateMiddleVelocityWithVelcoityVerlet();
+	//先计算下一时刻的位置用于碰撞检测
+	UpdatePesudoPositionWithVelocityVerlet();
+	//计算合力得到下一时刻的加速度
+	ApplyInternalForce();
+	ApplyExternalForce();
+	//根据上面的信息获得下一时刻的速度
+	UpdatePesudoVelocityWithVelocityVerlet();
+	//估计中间速度用于碰撞响应
+	EstimateMiddleVelocity();
 
 	if (parms.enableCollisionDetect) {
-		UpdatePesudoPosition();
+
+		CollisionResults_C2O<T> collisionResults_C2O;
+		CollisionResults_C2C<T> collisionResults_C2C;
+
 		BuildPatchBVH(1, parms.bvhShader, false);
-		//printf_s("%d %d\n", objectBvh->Fragments().size(), objectBvh->FlatBVHTree().size());
 		CollisionDetectWithRigidbody(objectBvh, collisionResults_C2O);
 
-		if (collisionResults_C2O.edge2Edge.size() != 0 || collisionResults_C2O.vertex2Triangle.size() != 0
+		if (collisionResults_C2O.edge2Edge.size() != 0 
+			|| collisionResults_C2O.vertex2Triangle.size() != 0
 			|| collisionResults_C2O.vertex2Triangle_.size() != 0) {
-			/*printf_s("%d %d %d\n", collisionResults_C2O.edge2Edge.size(),
-				collisionResults_C2O.vertex2Triangle.size(),
-				collisionResults_C2O.vertex2Triangle_.size());*/
-			//DebugCollisionResponse(collisionResults_C2O);
 			SimpleCollisionResponseWithRigidbody(collisionResults_C2O, friction, damping);
 		}
 	}
-	//DebugUpdatePosition();
-		UpdatePosition();
+	AdvanceStep();
 	
 	//BuildPatchBVH(1);
 	////ApplyInternalForce();

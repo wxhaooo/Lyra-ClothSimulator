@@ -33,6 +33,8 @@ namespace Lyra
 		vec3<T> velocity;
 		//t-\delta t时刻的速度
 		vec3<T> preVelocity;
+		//t+0.5 * \delta t时刻的速度
+		vec3<T> middleVelocity;
 		//t+\delta t时刻的速度
 		vec3<T> pseudoVelocity;
 		//t时刻的加速度
@@ -42,19 +44,32 @@ namespace Lyra
 		//t+\delta t时刻的加速度
 		vec3<T> pseudoAccleration;
 		
-
 		Particle() = default;
 		~Particle() = default;
 
 		Particle(vec2<T> &planeCoord, vec3<T> &wordPos, T mass = 1.0f, bool mv = true);
 
+		void AdvanceStep();
+
 		void ApplyForce(vec3<T> force);
 
 		void UpdatePseudoPosition(T delta_t);
 
+		void EstimateMiddleVelocity(T delta_t);
+
+		void UpdateMiddleVelocityWithVelocityVerlet(T delta_t);
+
+		void UpdatePseudoPositionWithVelocityVerlet(T delta_t);
+
+		void UpdatePseudoVelocityWithVelocityVerlet(T delta_t);
+
 		void DebugUpdatePosition(T delta_t);
 
+		//common verlet and estimate velocity
 		void UpdatePosition(T delta_t);
+
+		//velocity verlet
+		void UpdatePositionWithVelocityVerlet(T delta_t);
 
 		void ClearVelocity() { velocity.setZero(); }
 
@@ -81,6 +96,7 @@ Lyra::Particle<T>::Particle(vec2<T> &planeCoord, vec3<T> &worldPos, T mass, bool
 
 	velocity.setZero();
 	preVelocity.setZero();
+	middleVelocity.setZero();
 	pseudoVelocity.setZero();
 
 	acceleration.setZero();
@@ -95,9 +111,30 @@ Lyra::Particle<T>::Particle(vec2<T> &planeCoord, vec3<T> &worldPos, T mass, bool
 }
 
 template<typename T>
+void Lyra::Particle<T>::AdvanceStep()
+{
+	//不管有没有碰撞响应，下一时刻的信息都在前面更新到pseudoXXX里面
+	//这里只需要把pseudoXXX更新到XXX就可以了
+	prePosition = position;
+	position = pseudoPosition;
+	pseudoPosition.setZero();
+
+	preVelocity = velocity;
+	velocity = pseudoVelocity;
+
+	middleVelocity.setZero();
+	pseudoVelocity.setZero();
+
+	preAccleration = acceleration;
+	acceleration = pseudoAccleration;
+	pseudoAccleration.setZero();
+}
+
+template<typename T>
 void Lyra::Particle<T>::ApplyForce(vec3<T> force)
 {
-	acceleration += force / mass;
+	//acceleration += force / mass;
+	pseudoAccleration += force / mass;
 }
 
 template<typename T>
@@ -117,13 +154,60 @@ void Lyra::Particle<T>::UpdatePosition(T delta_t)
 	T delta_t2 = delta_t * delta_t;
 	vec3<T> tmp = position;
 	position = position + position - prePosition + acceleration * delta_t2;
-	//这里估计的是t时刻的速度
-	//velocity = (position - prePosition) / (T(2) * delta_t);
 	prePosition = tmp;
 	//这里估计的是t+\delta t时刻的速度
 	velocity = (position - prePosition)/delta_t;
 	//velocity = (position - prePosition);
 	acceleration.setZero();
+}
+
+template<typename T>
+void Lyra::Particle<T>::EstimateMiddleVelocity(T delta_t)
+{
+	middleVelocity = 1. / delta_t * (pseudoPosition - position);
+}
+
+template<typename T>
+void Lyra::Particle<T>::UpdateMiddleVelocityWithVelocityVerlet(T delta_t)
+{
+	middleVelocity = velocity + 0.5 * acceleration * delta_t;
+}
+
+template<typename T>
+void Lyra::Particle<T>::UpdatePseudoPositionWithVelocityVerlet(T delta_t)
+{
+	//用于碰撞检测用
+	//pseudoPosition = position + velocity * delta_t + 0.5 * acceleration * delta_t * delta_t;
+	pseudoPosition = position + middleVelocity * delta_t;
+}
+
+template<typename T>
+void Lyra::Particle<T>::UpdatePseudoVelocityWithVelocityVerlet(T delta_t)
+{
+	//用于计算下一时刻的速度
+	//pseudoVelocity = velocity + 0.5 * (acceleration + pseudoAccleration) * delta_t;
+	pseudoVelocity = middleVelocity + 0.5 * pseudoAccleration * delta_t;
+}
+
+template<typename T>
+void Lyra::Particle<T>::UpdatePositionWithVelocityVerlet(T delta_t)
+{
+	//只更新下一帧新的数据，不计算force
+	//如果做了碰撞响应就重新计算下一时刻的position和velocity并且更新
+	pseudoPosition = position + velocity * delta_t + 0.5 * acceleration * delta_t * delta_t;
+	pseudoVelocity = velocity + 0.5 * (acceleration + pseudoAccleration) * delta_t;
+
+	prePosition = position;
+	position = pseudoPosition;
+	pseudoPosition.setZero();
+
+	preVelocity = velocity;
+	velocity = pseudoVelocity;
+	pseudoVelocity.setZero();
+
+	preAccleration = acceleration;
+	acceleration = pseudoAccleration;
+	pseudoAccleration.setZero();
 }
 
 template<typename T>

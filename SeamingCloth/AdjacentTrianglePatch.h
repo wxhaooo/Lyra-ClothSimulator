@@ -64,11 +64,16 @@ template<typename T>
 void Lyra::AdjacentTrianglePatch<T>::ExplicitBendingForce()
 {
 	//printf_s("23333\n");
-	vec3<T> e02 = p0->position - p2->position;
+	vec3<T> e02 = p0->pseudoPosition - p2->pseudoPosition;
+	vec3<T> e03 = p0->pseudoPosition - p3->pseudoPosition;
+	vec3<T> e12 = p1->pseudoPosition - p2->pseudoPosition;
+	vec3<T> e13 = p1->pseudoPosition - p3->pseudoPosition;
+	vec3<T> E = p3->pseudoPosition - p2->pseudoPosition;
+	/*vec3<T> e02 = p0->position - p2->position;
 	vec3<T> e03 = p0->position - p3->position;
 	vec3<T> e12 = p1->position - p2->position;
 	vec3<T> e13 = p1->position - p3->position;
-	vec3<T> E = p3->position - p2->position;
+	vec3<T> E = p3->position - p2->position;*/
 
 	vec3<T> N1 = e02.cross(e03);
 	vec3<T> N2 = e13.cross(e12);
@@ -101,11 +106,16 @@ void Lyra::AdjacentTrianglePatch<T>::ExplicitBendingForce()
 template<typename T>
 void Lyra::AdjacentTrianglePatch<T>::ExplicitDampingBendingForce()
 {
-	vec3<T> e02 = p0->position - p2->position;
+	vec3<T> e02 = p0->pseudoPosition - p2->pseudoPosition;
+	vec3<T> e03 = p0->pseudoPosition - p3->pseudoPosition;
+	vec3<T> e12 = p1->pseudoPosition - p2->pseudoPosition;
+	vec3<T> e13 = p1->pseudoPosition - p3->pseudoPosition;
+	vec3<T> E = p3->pseudoPosition - p2->pseudoPosition;
+	/*vec3<T> e02 = p0->position - p2->position;
 	vec3<T> e03 = p0->position - p3->position;
 	vec3<T> e12 = p1->position - p2->position;
 	vec3<T> e13 = p1->position - p3->position;
-	vec3<T> E = p3->position - p2->position;
+	vec3<T> E = p3->position - p2->position;*/
 
 	vec3<T> N1 = e02.cross(e03);
 	vec3<T> N2 = e13.cross(e12);
@@ -121,7 +131,8 @@ void Lyra::AdjacentTrianglePatch<T>::ExplicitDampingBendingForce()
 
 	vec3<T> n1 = N1.normalized(); vec3<T> n2 = N2.normalized();
 
-	T dThetaDT = u1.dot(p0->velocity) + u2.dot(p1->velocity) + u3.dot(p2->velocity) + u4.dot(p3->velocity);
+	//T dThetaDT = u1.dot(p0->velocity) + u2.dot(p1->velocity) + u3.dot(p2->velocity) + u4.dot(p3->velocity);
+	T dThetaDT = u1.dot(p0->middleVelocity) + u2.dot(p1->middleVelocity) + u3.dot(p2->middleVelocity) + u4.dot(p3->middleVelocity);
 	T bdFactor = -dampingBendCoefficent * El*dThetaDT;
 	p0->ApplyForce(u1*bdFactor);
 	p1->ApplyForce(u2*bdFactor);

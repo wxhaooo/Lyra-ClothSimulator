@@ -109,7 +109,9 @@ Lyra::TrianglePatch<T>::TrianglePatch(particle_pt<T> xx1, particle_pt<T> xx2, pa
 	
 	matTmp << deltaU1, deltaU2, deltaV1, deltaV2;
 
-	/*mat2<T> Sigma = mat2<T>::Zero();
+	//std::cout << matTmp << "\n";
+
+	mat2<T> Sigma = mat2<T>::Zero();
 	mat2<T> SigmaT;
 
 	auto U = matTmp.bdcSvd(Eigen::ComputeFullU).matrixU();
@@ -131,9 +133,10 @@ Lyra::TrianglePatch<T>::TrianglePatch(particle_pt<T> xx1, particle_pt<T> xx2, pa
 
 	SigmaT = Sigma.transpose();
 
-	theInverse = V * SigmaT * U.transpose();*/
+	theInverse = V * SigmaT * U.transpose();
 
-	theInverse = matTmp.inverse();
+	//theInverse = matTmp.inverse();
+	
 	//std::cout << theInverse << "\n\n";
 
 	T u1v2u2v1 = deltaU1 * deltaV2 - deltaU2 * deltaV1;
@@ -165,8 +168,11 @@ Lyra::TrianglePatch<T>::TrianglePatch(particle_pt<T> xx1, particle_pt<T> xx2, pa
 template<typename T>
 void Lyra::TrianglePatch<T>::ExplicitStretchForce()
 {
-	vec3<T> deltaX1 = x1->position - x0->position;
-	vec3<T> deltaX2 = x2->position - x0->position;
+	vec3<T> deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
+	vec3<T> deltaX2 = x2->pseudoPosition - x0->pseudoPosition;
+
+	/*vec3<T> deltaX1 = x1->position - x0->position;
+	vec3<T> deltaX2 = x2->position - x0->position;*/
 
 	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
 
@@ -175,6 +181,10 @@ void Lyra::TrianglePatch<T>::ExplicitStretchForce()
 
 	//WUV matrix
 	mat<T, 3, 2> wUV = deltaX12 * theInverse;
+
+	//std::cout << deltaX12 << "\n";
+	//std::cout << theInverse << "\n";
+	//std::cout << wUV << "\n";
 	//std::cout << theInverse << "\n\n";
 
 	//normalized wU,wV
@@ -224,9 +234,11 @@ void Lyra::TrianglePatch<T>::ExplicitStretchForce()
 template<typename T>
 void Lyra::TrianglePatch<T>::ExplicitDampingStretchForce()
 {
-	//std::cout << "damping Stretch Force\n";
-	vec3<T> deltaX1 = x1->position - x0->position;
-	vec3<T> deltaX2 = x2->position - x0->position;
+	vec3<T> deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
+	vec3<T> deltaX2 = x2->pseudoPosition - x0->pseudoPosition;
+
+	//vec3<T> deltaX1 = x1->position - x0->position;
+	//vec3<T> deltaX2 = x2->position - x0->position;
 
 	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
 
@@ -250,15 +262,16 @@ void Lyra::TrianglePatch<T>::ExplicitDampingStretchForce()
 	mat<T, 3, 2> pcpx0;
 	pcpx0.col(0) = area * wux0 * wU;
 	pcpx0.col(1) = area * wvx0 * wV;
-	mat<T, 2, 1> Cdot0 = pcpx0.transpose() * x0->velocity;
+	mat<T, 2, 1> Cdot0 = pcpx0.transpose() * /*x0->velocity*/x0->middleVelocity;
 	vec3<T> dampingp0 = dampingCoefficent * pcpx0 * Cdot0;
+	//std::cout << dampingp0 << "\n";
 	x0->ApplyForce(dampingp0);
 
 	//damping p1
 	mat<T, 3, 2> pcpx1;
 	pcpx1.col(0) = area * wux1 * wU;
 	pcpx1.col(1) = area * wvx1 * wV;
-	mat<T, 2, 1> Cdot1 = pcpx1.transpose() * x1->velocity;
+	mat<T, 2, 1> Cdot1 = pcpx1.transpose() * /*x1->velocity*/x1->middleVelocity;
 	vec3<T> dampingp1 = dampingCoefficent * pcpx1 * Cdot1;
 	x1->ApplyForce(dampingp1);
 
@@ -266,7 +279,7 @@ void Lyra::TrianglePatch<T>::ExplicitDampingStretchForce()
 	mat<T, 3, 2> pcpx2;
 	pcpx2.col(0) = area * wux2 * wU;
 	pcpx2.col(1) = area * wvx2 * wV;
-	mat<T, 2, 1> Cdot2 = pcpx2.transpose() * x2->velocity;
+	mat<T, 2, 1> Cdot2 = pcpx2.transpose() * /*x2->velocity*/x2->middleVelocity;
 	vec3<T> dampingp2 = dampingCoefficent * pcpx2 * Cdot2;
 	x2->ApplyForce(dampingp2);
 
@@ -278,13 +291,10 @@ void Lyra::TrianglePatch<T>::ExplicitDampingStretchForce()
 template<typename T>
 void Lyra::TrianglePatch<T>::ExplicitShearForce()
 {
-	vec3<T> deltaX1 = x1->position - x0->position;
-	vec3<T> deltaX2 = x2->position - x0->position;
-
-	////这是条很神奇的语句，先留着
-	//if (deltaX1.norm() != deltaX1.norm()) {
-	//	std::cout << deltaX1 << "\n";
-	//}
+	vec3<T> deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
+	vec3<T> deltaX2 = x2->pseudoPosition - x0->pseudoPosition;
+	/*vec3<T> deltaX1 = x1->position - x0->position;
+	vec3<T> deltaX2 = x2->position - x0->position;*/
 
 	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
 
@@ -304,16 +314,21 @@ void Lyra::TrianglePatch<T>::ExplicitShearForce()
 	T Csh = area * wU.dot(wV);
 	T shearCoefficentTmp = - shearCoefficent * area * Csh;
 
+	//std::cout << area << " " << Csh << " " << "\n";
+	//std::cout << shearCoefficentTmp << "\n";
+
 	//shear force p0
-	vec3<T> shearp0 = vec3<T>(wux0 * wV(0) + wvx0 * wU(0), wux0 * wV(1) + wvx0 * wV(1), wux0 * wV(2) + wvx0 * wV(2));
+	vec3<T> shearp0 = vec3<T>(wux0 * wV(0) + wvx0 * wU(0), wux0 * wV(1) + wvx0 * wU(1), wux0 * wV(2) + wvx0 * wU(2));
+	//std::cout << shearp0.norm() << "\n";
 	shearp0 *= shearCoefficentTmp;
 	x0->ApplyForce(shearp0);
+	//std::cout << shearp0 << "\n";
 	//shear force p1
-	vec3<T> shearp1 = vec3<T>(wux1 * wV(0) + wvx1 * wU(0), wux1 * wV(1) + wvx1 * wV(1), wux1 * wV(2) + wvx1 * wV(2));
+	vec3<T> shearp1 = vec3<T>(wux1 * wV(0) + wvx1 * wU(0), wux1 * wV(1) + wvx1 * wU(1), wux1 * wV(2) + wvx1 * wU(2));
 	shearp1 *= shearCoefficentTmp;
 	x1->ApplyForce(shearp1);
 	//shear force p2
-	vec3<T> shearp2 = vec3<T>(wux2 * wV(0) + wvx2 * wU(0), wux2 * wV(1) + wvx2 * wV(1), wux2 * wV(2) + wvx2 * wV(2));
+	vec3<T> shearp2 = vec3<T>(wux2 * wV(0) + wvx2 * wU(0), wux2 * wV(1) + wvx2 * wU(1), wux2 * wV(2) + wvx2 * wU(2));
 	shearp2 *= shearCoefficentTmp;
 	x2->ApplyForce(shearp2);
 }
@@ -321,18 +336,17 @@ void Lyra::TrianglePatch<T>::ExplicitShearForce()
 template<typename T>
 void Lyra::TrianglePatch<T>::ExplicitDampingShearForce()
 {
-	vec3<T> deltaX1 = x1->position - x0->position;
-	vec3<T> deltaX2 = x2->position - x0->position;
-
-	//这是条很神奇的语句，先留着
-	/*if (deltaX1.norm() != deltaX1.norm()) {
-		std::cout << deltaX1 << "\n";
-	}*/
+	vec3<T> deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
+	vec3<T> deltaX2 = x2->pseudoPosition - x0->pseudoPosition;
+	/*vec3<T> deltaX1 = x1->position - x0->position;
+	vec3<T> deltaX2 = x2->position - x0->position;*/
 
 	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
 
 	deltaX12.col(0) = deltaX1;
 	deltaX12.col(1) = deltaX2;
+
+	//std::cout << deltaX12 << "\n";
 
 	//WUV matrix
 	mat<T, 3, 2> wUV = deltaX12 * theInverse;
@@ -344,21 +358,28 @@ void Lyra::TrianglePatch<T>::ExplicitDampingShearForce()
 	T wUl = wUV.col(0).norm();
 	T wVl = wUV.col(1).norm();
 
+	//std::cout << wUV << "\n\n";
+
 	T dampingCoefficent = -shearCoefficent * dampingShearCoefficent;
 
 	//damping p0
-	vec3<T> pcpx0 = vec3<T>(wux0 * wV(0) + wvx0 * wU(0), wux0 * wV(1) + wvx0 * wV(1), wux0 * wV(2) + wvx0 * wV(2));
-	T cdot0 = pcpx0.dot(x0->velocity);
+	vec3<T> pcpx0 = area * vec3<T>(wux0 * wV(0) + wvx0 * wU(0), wux0 * wV(1) + wvx0 * wU(1), wux0 * wV(2) + wvx0 * wU(2));
+	//std::cout << pcpx0.norm() << "\n";
+	//std::cout << x0->middleVelocity << "\n";
+	T cdot0 = pcpx0.dot(/*x0->velocity*/x0->middleVelocity);
+	//std::cout << cdot0 << "\n";
 	vec3<T> dampingp0 = dampingCoefficent * pcpx0 * cdot0;
+	//std::cout << dampingp0.norm() << "\n";
 	x0->ApplyForce(dampingp0);
+	//std::cout << x0->acceleration.norm() << "\n";
 	//damping p1
-	vec3<T> pcpx1 = vec3<T>(wux1 * wV(0) + wvx1 * wU(0), wux1 * wV(1) + wvx1 * wV(1), wux1 * wV(2) + wvx1 * wV(2));
-	T cdot1 = pcpx1.dot(x1->velocity);
+	vec3<T> pcpx1 = area * vec3<T>(wux1 * wV(0) + wvx1 * wU(0), wux1 * wV(1) + wvx1 * wU(1), wux1 * wV(2) + wvx1 * wU(2));
+	T cdot1 = pcpx1.dot(/*x1->velocity*/x1->middleVelocity);
 	vec3<T> dampingp1 = dampingCoefficent * pcpx1 * cdot1;
 	x1->ApplyForce(dampingp1);
 	//damping p2
-	vec3<T> pcpx2 = vec3<T>(wux2 * wV(0) + wvx2 * wU(0), wux2 * wV(1) + wvx2 * wV(1), wux2 * wV(2) + wvx2 * wV(2));
-	T cdot2 = pcpx2.dot(x2->velocity);
+	vec3<T> pcpx2 = area * vec3<T>(wux2 * wV(0) + wvx2 * wU(0), wux2 * wV(1) + wvx2 * wU(1), wux2 * wV(2) + wvx2 * wU(2));
+	T cdot2 = pcpx2.dot(/*x2->velocity*/x2->middleVelocity);
 	vec3<T> dampingp2 = dampingCoefficent * pcpx2 * cdot2;
 	x2->ApplyForce(dampingp2);
 }
