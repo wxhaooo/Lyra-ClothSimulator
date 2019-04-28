@@ -113,7 +113,7 @@ int main()
 		setting.cameraPosition = cameraPosition;
 		setting.cameraTarget = cameraTarget;
 		setting.scrollSensitivity = 0.3f;
-		setting.keyboardSensitivity = 0.3f;
+		setting.keyboardSensitivity = 0.1f;
 		setting.mouseSensitivity = 0.05f;
 		setting.maxPitchRate = 0.004f;
 		setting.maxHeadingRate = 0.004f;
@@ -160,19 +160,20 @@ int main()
 	Lyra::SeamingInfo<Type> seamingInfo1;
 	Lyra::ClothParms<Type> clothParms;
 
-	std::vector<uint32> stickPoints0 = { /*134,235,208,209*/ };
+	std::vector<uint32> stickPoints0 = { /*3,205,28,92,217,2*//*134,235,208,209*/ };
 	std::vector<uint32> stickPoints1 = { /*4,5,6*/ };
 	//patch0 Parms
 	{
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
 		//parms0.name = "square4.obj";
-		parms0.name = "test6.obj";
+		parms0.name = "test4.obj";
 		//parms0.name = "Square_Front.obj";
 		parms0.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
 		parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE;
 		parms0.orientation = Lyra::ClothPatchOrientation::LYRA_PATCH_XZ;
+		//parms0.orientation = Lyra::ClothPatchOrientation::LYRA_PATCH_XY;
 		//parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE;
 		parms0.stickPoints.reset(&(stickPoints0));
 		///scale小了会导致plane force变小，结果系统更稳定，需要确定一个合适的scale
@@ -184,24 +185,26 @@ int main()
 		///@(do_1)问题解决，可以缝合，积分方法问题
 		parms0.stretchingFactor = 151.503906f;
 		parms0.shearingFactor = 30.250183f;
-		parms0.bendingFactor = 117.070122e-6f;
+		parms0.bendingFactor =/* 0.0f;*/ 117.070122e-6f;
 		///damping stretch引起的问题，可能是solver不能解刚性过大的系统
-		parms0.dampingStretchFactor = 0.2f;
-		parms0.dampingShearFactor = 0.2f;
-		parms0.dampingBendingFactor = 2 * 117.070122e-7f;
+		parms0.dampingStretchFactor = 0.0f;
+		parms0.dampingShearFactor = 0.0f;
+		parms0.dampingBendingFactor = /*0.0f;*/ 1 * 117.070122e-7f;
 		parms0.stretchScaleUDir = 1.f;
 		parms0.stretchScaleVDir = 1.f;
 
+		//石头的摩擦力
 		parms0.frictionFactorForObject = 0.0f;
 		parms0.dampingFactorForObject = 0.1f;
 
 		parms0.planeForceSwitch.enableStretchForce = true;
 		parms0.planeForceSwitch.enableShearForce = true;
-		parms0.planeForceSwitch.enableDampingStretchForce = false;
-		parms0.planeForceSwitch.enableDampingShearForce = false;
+		//damping应该可以用过全隐式方法得到缓解
+		parms0.planeForceSwitch.enableDampingStretchForce = true;
+		parms0.planeForceSwitch.enableDampingShearForce = true;
 
-		parms0.spaceForceSwitch.enableBendingForce = false;
-		parms0.spaceForceSwitch.enableDampingBendingForce = false;
+		parms0.spaceForceSwitch.enableBendingForce = true;
+		parms0.spaceForceSwitch.enableDampingBendingForce = true;
 
 		parms0.enableCollisionDetect = true;
 	}
@@ -429,7 +432,7 @@ int main()
 	}
 
 	clothPatch0->LoadPatch(parms0);
-	clothPatch1->LoadPatch(parms1);
+	//clothPatch1->LoadPatch(parms1);
 
 	cloth->AddPatch(clothPatch0);
 	//cloth->AddPatch(clothPatch1);
@@ -469,9 +472,9 @@ int main()
 
 	cloth->GlBind();
 
-	body->GlBind();
+	body->GlBind(0.99);
 
-	objBVH->GlBind();
+	//objBVH->GlBind();
 
 	camera.Init(setting, modelMat);
 
@@ -488,19 +491,21 @@ int main()
 		viewMat = camera.GetViewMatrix();
 		projectionMat = camera.GetProjectMatrix();
 
+		//body->GlUpdate();
+
 		/*bBox.GlDraw(camera);
 
 		objTriangle.GlDraw();*/
 
-		cloth->GlUpdate();
 		cloth->Simulate(objBVH);
+		cloth->GlUpdate();
 		//cloth->DebugSimulate(bvhShader);
 		
 		cloth->Rendering(camera, lineMode);
 
 		bodyShader.use();
 		bodyShader.setMat4("MVP", MVP);
-		body->GlDrawModel(bodyShader, lineMode);
+		//body->GlDrawModel(bodyShader, lineMode);
 
 		//cloth->GlDrawBvh(camera);
 

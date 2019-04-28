@@ -214,6 +214,7 @@ void Lyra::ObjectBVH<T>::Init(ModelPointer<T> & model)
 	auto& triangles = mesh.Triangles();
 
 	for (auto& tri : triangles) {
+
 		fragments.push_back(BBoxObjTriangle<T>(tri.V1(), tri.V2(), tri.V3()));
 	}
 }

@@ -156,6 +156,7 @@ namespace Lyra
 			MeshExporterSwitch exportSwitch = MESH_EXPORTER_ALL);
 
 	private:
+		//Simulation
 		void AdvanceStep();
 		void UpdatePosition();
 		void UpdatePesudoPosition();
@@ -167,11 +168,12 @@ namespace Lyra
 		bool CheckSeamingCondition();
 		void UpdatePatches();
 		void UpdateSeamingPosition();
-
+		//Rendering
 		void GlBindSeaming();
 		void GlUpdateSeaming();
 		void GlRenderSeaming(gph::Camera<T> &camera);
-
+		void GenerateParticleNormal();
+		
 		void BuildPatchBVH(uint32 leafSize = 4, shader_sp<T> shader = nullptr, bool draw = false);
 
 		void GramentSimulate();
@@ -331,6 +333,9 @@ bool Lyra::Cloth<T>::Integrate(ClothParms<T> &parms)
 
 	//Build BVH
 	BuildPatchBVH();
+
+	//生成每个patch的顶点法线用于渲染
+	GenerateParticleNormal();
 
 	//Output simulation information
 	SimulationInfo();
@@ -538,6 +543,7 @@ void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_
 {
 	//利用middle velocity 计算 pseudo velocity
 	//每个particle只响应一次
+	//std::cout << edge2Edges.size() << "\n";
 	std::set<particle_pt<T>> tmp;
 	for (auto& edge : edge2Edges) {
 
@@ -555,12 +561,14 @@ void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_
 
 		vec3<T> normal = v0.cross(v1).normalized();
 		/////////////////////v0顶点的响应/////////////////////////////
-		if (tmp.find(cp0) != tmp.end())
+		if (tmp.find(cp0) == tmp.end())
 		{
 			vec3<T> p0v = cp0->middleVelocity;
 			//法线速度
 			vec3<T> p0vn = p0v.dot(normal) * normal;
-				//切线速度
+			/*if (p0vn.dot(normal) < 0)
+				p0vn = - p0vn;*/
+			//切线速度
 			vec3<T> p0vt = (p0v - p0vn);
 			//std::cout << p0vt.norm() << "\n";
 			if (p0vt.norm() >= fricationFactor * p0vn.norm()) {
@@ -568,17 +576,22 @@ void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_
 				cp0->pseudoVelocity = p0vt - fricationFactor * p0vn.norm() * p0vt.normalized()
 					- dampingFactor * p0vn;
 			}
-			else
+			else {
+				//std::cout << "2333\n";
 				cp0->pseudoVelocity = -dampingFactor * p0vn;
-
+			}
+			//std::cout << parms.delta_t << "\n";
 			cp0->pseudoPosition = cp0->position + cp0->pseudoVelocity * parms.delta_t;
+			tmp.insert(cp0);
 		}
-		tmp.insert(cp0);
+		
 		/////////////////////v1顶点的响应/////////////////////////////
-		if (tmp.find(cp1) != tmp.end()) {
+		if (tmp.find(cp1) == tmp.end()) {
 			vec3<T> p1v = cp1->middleVelocity;
 			//法线速度
 			vec3<T> p1vn = p1v.dot(normal) * normal;
+			/*if (p1vn.dot(normal) < 0)
+				p1vn = -p1vn;*/
 			/*if (p1vn.dot(normal) > 0)
 				std::cout << "Emmmm\n";*/
 				//切线速度
@@ -590,12 +603,14 @@ void Lyra::Cloth<T>::SimpleEdge2EdgeResponseWithRigidbody(std::vector<Edge2Edge_
 				cp1->pseudoVelocity = p1vt - fricationFactor * p1vn.norm() * p1vt.normalized()
 					- dampingFactor * p1vn;
 			}
-			else
+			else {
+				//std::cout << "2333\n";
 				cp1->pseudoVelocity = -dampingFactor * p1vn;
-
+			}
+			//std::cout << parms.delta_t << "\n";
 			cp1->pseudoPosition = cp1->position + cp1->pseudoVelocity * parms.delta_t;
-		}
-		tmp.insert(cp1);
+			tmp.insert(cp1);
+		}	
 	}
 
 	//std::cout << tmp.size() << "\n";
@@ -627,8 +642,8 @@ void Lyra::Cloth<T>::SimplePoint2TriangleResponseWithRigidbody(std::vector<Verte
 		vec3<T> normal(normalTmp.x, normalTmp.y, normalTmp.z);
 		//法线速度
 		vec3<T> vn = v.dot(normal) * normal;
-		/*if (vn.dot(normal) > 0)
-			std::cout << "Emmmm\n";*/
+		if (vn.dot(normal) > 0)
+			vn = -vn;
 		//切线速度
 		vec3<T> vt = (v - vn);
 		//std::cout << vt.norm() << "\n";
@@ -637,9 +652,11 @@ void Lyra::Cloth<T>::SimplePoint2TriangleResponseWithRigidbody(std::vector<Verte
 			v2t.v0->pseudoVelocity = vt - fricationFactor * vn.norm() * vt.normalized()
 				- dampingFactor * vn;
 		}
-		else
+		else {
+			//std::cout << "2333\n";
 			v2t.v0->pseudoVelocity = -dampingFactor * vn;
-
+		}
+		//std::cout << parms.delta_t << "\n";
 		v2t.v0->pseudoPosition = v2t.v0->position + v2t.v0->pseudoVelocity * parms.delta_t;
 	}
 
@@ -823,6 +840,9 @@ void Lyra::Cloth<T>::Simulate(Lyra::objectBvh_sp<T> objectBvh)
 
 		PatchSimulate(objectBvh);
 	}
+
+	//生成新的顶点法线用于渲染
+	GenerateParticleNormal();
 
 	elapseTime += parms.delta_t;
 
@@ -1041,12 +1061,22 @@ void Lyra::Cloth<T>::GlRenderSeaming(gph::Camera<T> &camera)
 template<typename T>
 void Lyra::Cloth<T>::Rendering(gph::Camera<T> &camera, bool lineMode)
 {
+	GenerateParticleNormal();
+
 	for (auto& patch : patches) {
 		patch->Rendering(particles, camera, lineMode);
 	}
 
 	if (!isSeaming && parms.enableSeaming)
 		GlRenderSeaming(camera);
+}
+
+template<typename T>
+void Lyra::Cloth<T>::GenerateParticleNormal()
+{
+	for (auto& patch : patches) {
+		patch->GenerateParticleNormal(particles);
+	}
 }
 
 template<typename T>

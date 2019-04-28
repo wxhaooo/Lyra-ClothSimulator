@@ -71,6 +71,7 @@ namespace Lyra
 
 		void Rendering(std::vector<Particle<T>> &particles,gph::Camera<T> &camera, bool lineMode);
 
+		void GenerateParticleNormal(std::vector<Particle<T>>& particles);
 		/*Simulation Functions*/
 		void ApplyWind(vec3<T> &windVelocity, T density, T cod);
 
@@ -134,6 +135,7 @@ namespace Lyra
 		std::vector<vec3<T>> acclerationVec;
 		std::vector<vec2<T>> uvCoordVec;
 		std::vector<vec3<T>> normalVec;
+		std::vector<vec3<T>> triangleNormalVec;
 
 		uint32_sp VAO;
 		uint32_sp VBO;
@@ -295,8 +297,9 @@ void Lyra::ClothPatch<T>::RevisedMass()
 		triangleArea.push_back(area);
 	}
 
-	/*std::cout << clothArea << "\n";
-	system("pause");*/
+	//std::cout << triangleArea.size() << "\n";
+	//std::cout << clothArea << "\n";
+	//system("pause");
 
 	int adjTriangleNum = 0;
 	std::vector<uint32> triangleIndexTmp;
@@ -315,11 +318,13 @@ void Lyra::ClothPatch<T>::RevisedMass()
 		T totalMass = T(0);
 		for (uint32 &index : triangleIndexTmp) {
 			totalMass += triangleArea[index] * parms.density;
+			//std::cout << triangleArea[index] << "\n";
 		}
 
+		//std::cout << totalMass << "\n";
 		//质量如果过小就把它设定为固定值
 		particles[i].mass = /*1.0;*/totalMass / 3.f;
-		clothMass += particles[i].mass;
+		//clothMass += particles[i].mass;
 
 		//std::cout << particles[i].mass << "\n";
 
@@ -328,7 +333,7 @@ void Lyra::ClothPatch<T>::RevisedMass()
 		}
 	}
 
-	std::cout << clothMass << "\n";
+	//std::cout << clothMass << "\n";
 	//system("pause");
 }
 
@@ -457,6 +462,61 @@ void Lyra::ClothPatch<T>::GenerateAdjacentTrianglePatches(std::vector<Particle<T
 																			   aux[0], aux[1], aux[2], aux[3],
 																			   bc, dbc));
 			}
+		}
+	}
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::GenerateParticleNormal(std::vector<Particle<T>>& particles)
+{
+	triangleNormalVec.clear();
+	normalVec.clear();
+	//先计算每个三角形的法线
+	for (TrianglePatch<T>& tri : trianglePatches) {
+		triangleNormalVec.push_back(tri.Normal());
+	}
+	//每个particle邻接的三角形数
+	uint32 adjTriangleNum = 0;
+	std::vector<uint32> triangleIndexTmp;
+	//计算每个顶点的法线
+	for (uint32 i = 0; i < numberOfParticle; i++) {
+
+		adjTriangleNum = 0;
+		triangleIndexTmp.clear();
+
+		uint32 globalIndex = mapping.get()[i];
+		for (auto& triIndex : globalTriangleIndices)
+		{
+			if (triIndex(0) == globalIndex || 
+				triIndex(1) == globalIndex || 
+				triIndex(2) == globalIndex) {
+				triangleIndexTmp.push_back(adjTriangleNum);
+			}
+			adjTriangleNum++;
+		}
+
+		vec3<T> normalTmp;
+		normalTmp.Zero();
+
+		for (uint32& index : triangleIndexTmp)
+		{
+			auto& triNormal = triangleNormalVec[index];
+			normalTmp(0) += triNormal(0);
+			normalTmp(1) += triNormal(1);
+			normalTmp(2) += triNormal(2);
+		}
+		//面法线求均值是顶点法线
+		if (triangleIndexTmp.size() > 0) {
+			normalTmp(0) /= triangleIndexTmp.size();
+			normalTmp(1) /= triangleIndexTmp.size();
+			normalTmp(2) /= triangleIndexTmp.size();
+
+			normalTmp.normalize();
+			normalVec.push_back(normalTmp);
+		}
+		else {
+			std::cerr << "triangleIndex is zero!\n";
+			exit(0);
 		}
 	}
 }
