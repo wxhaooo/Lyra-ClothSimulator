@@ -745,13 +745,6 @@ void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 	T friction = patches[0]->Parms().frictionFactorForObject;
 	T damping = patches[0]->Parms().dampingFactorForObject;
 
-	//std::cout << friction << " " << damping << '\n';
-
-	/*ApplyInternalForce();
-	ApplyExternalForce();
-
-	UpdatePosition();*/
-
 	//计算t+0.5 * \delta t时刻的速度用于计算damping force
 	UpdateMiddleVelocityWithVelcoityVerlet();
 	//先计算下一时刻的位置用于碰撞检测
@@ -779,32 +772,6 @@ void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 		}
 	}
 	AdvanceStep();
-	
-	//BuildPatchBVH(1);
-	////ApplyInternalForce();
-	//ApplyExternalForce();
-
-	//CollisionResults_C2O<T> collisionResults_C2O;
-	//CollisionResults_C2C<T> collisionResults_C2C;
-
-	//if (parms.enableCollisionDetect) {
-	//	UpdatePesudoPosition();
-	//	//printf_s("%d %d\n", objectBvh->Fragments().size(), objectBvh->FlatBVHTree().size());
-	//	CollisionDetectWithRigidbody(objectBvh, collisionResults_C2O);
-
-	//	if (collisionResults_C2O.edge2Edge.size() != 0 || collisionResults_C2O.vertex2Triangle.size() != 0
-	//		|| collisionResults_C2O.vertex2Triangle_.size() != 0) {
-	//		/*printf_s("%d %d %d\n", collisionResults_C2O.edge2Edge.size(),
-	//			collisionResults_C2O.vertex2Triangle.size(),
-	//			collisionResults_C2O.vertex2Triangle_.size());*/
-	//		DebugCollisionResponse(collisionResults_C2O);
-	//	}
-	//}
-	//DebugUpdatePosition();
-	//	//UpdatePosition();
-	//elapseTime += parms.delta_t;
-
-	//std::cout << elapseTime << "\n";
 }
 
 template<typename T>

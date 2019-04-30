@@ -30,8 +30,11 @@ namespace Lyra
 	template<typename T>
 	using vec4 = Eigen::Matrix<T, 4, 1>;
 
-	template<typename T, int N, int M>
-	using mat = Eigen::Matrix<T, N, M>;
+	template<typename T, int N>
+	using vec = Eigen::Matrix<T, N, 1>;
+
+	template<typename T, int M, int N>
+	using mat = Eigen::Matrix<T, M, N>;
 
 	template<typename T>
 	using mat2 = Eigen::Matrix<T, 2, 2>;
@@ -43,7 +46,7 @@ namespace Lyra
 	using mat4 = Eigen::Matrix<T, 4, 4>;
 
 	template<typename T,int N>
-	using matn = Eigen::Matrix<T, N, N>;
+	using matnxn = Eigen::Matrix<T, N, N>;
 
 	template<typename T>
 	using vector_sp = std::shared_ptr<std::vector<T>>;
