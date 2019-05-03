@@ -159,10 +159,16 @@ namespace Lyra
 		//Simulation
 		void AdvanceStep();
 		void UpdatePosition();
+		void UpdateMiddleVelocity();
 		void UpdatePesudoPosition();
 		void UpdateMiddleVelocityWithVelcoityVerlet();
 		void UpdatePesudoPositionWithVelocityVerlet();
 		void UpdatePesudoVelocityWithVelocityVerlet();
+
+		void ApplyDampingForceImplicit(VelocityUpdate updateCat);
+		void UpdatePesudoPositionImplicit();
+		void ApplyInternalForceExplicit();
+
 		//用于cloth-cloth碰撞时用
 		void EstimateMiddleVelocity();
 		bool CheckSeamingCondition();
@@ -178,6 +184,7 @@ namespace Lyra
 
 		void GramentSimulate();
 		void PatchSimulate(Lyra::objectBvh_sp<T> objectBvh);
+		void ImplicitPatchSimulate(Lyra::objectBvh_sp<T> objectBvh);
 
 		void CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult);
 		void CollisionDetectWithOtherCloth();
@@ -392,6 +399,33 @@ void Lyra::Cloth<T>::UpdatePosition()
 {
 	for (auto &p : particles) {
 		p.UpdatePosition(parms.delta_t);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::ApplyDampingForceImplicit(VelocityUpdate updateCat)
+{
+	for (auto& patch : patches) {
+		patch->ApplyDampingPlaneForceImplicit(parms.planeForceSwitch, parms.delta_t, updateCat);
+		patch->ApplyDampingSpaceForceImplicit(parms.spaceForceSwitch, parms.delta_t);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::UpdatePesudoPositionImplicit()
+{
+	for (auto& p : particles) {
+		if (p.movable)
+			p.UpdatePesudoPositionImplicit(parms.delta_t);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::ApplyInternalForceExplicit()
+{
+	for (auto& patch : patches) {
+		patch->ApplyPlaneForceExplicit(parms.planeForceSwitch);
+		patch->ApplySpaceForceExplicit(parms.spaceForceSwitch);
 	}
 }
 
@@ -740,6 +774,46 @@ void Lyra::Cloth<T>::UpdateMiddleVelocityWithVelcoityVerlet()
 }
 
 template<typename T>
+void Lyra::Cloth<T>::UpdateMiddleVelocity()
+{
+	for (auto& p : particles) {
+		p.UpdateMiddleVelocity(parms.delta_t);
+	}
+}
+
+template<typename T>
+void Lyra::Cloth<T>::ImplicitPatchSimulate(Lyra::objectBvh_sp<T> objectBvh)
+{
+	T friction = patches[0]->Parms().frictionFactorForObject;
+	T damping = patches[0]->Parms().dampingFactorForObject;
+
+	ApplyDampingForceImplicit(VelocityUpdate::MIDDLE_VELOCITY);
+	UpdatePesudoPositionImplicit();
+	ApplyInternalForceExplicit();
+	UpdateMiddleVelocity();
+	ApplyDampingForceImplicit(VelocityUpdate::PSEUDO_VELOCITY);
+
+	//估计中间速度用于碰撞响应
+	EstimateMiddleVelocity();
+
+	if (parms.enableCollisionDetect) {
+
+		CollisionResults_C2O<T> collisionResults_C2O;
+		CollisionResults_C2C<T> collisionResults_C2C;
+
+		BuildPatchBVH(1, parms.bvhShader, false);
+		CollisionDetectWithRigidbody(objectBvh, collisionResults_C2O);
+
+		if (collisionResults_C2O.edge2Edge.size() != 0
+			|| collisionResults_C2O.vertex2Triangle.size() != 0
+			|| collisionResults_C2O.vertex2Triangle_.size() != 0) {
+			SimpleCollisionResponseWithRigidbody(collisionResults_C2O, friction, damping);
+		}
+	}
+	AdvanceStep();
+}
+
+template<typename T>
 void Lyra::Cloth<T>::PatchSimulate(objectBvh_sp<T> objectBvh)
 {
 	T friction = patches[0]->Parms().frictionFactorForObject;
@@ -805,7 +879,7 @@ void Lyra::Cloth<T>::Simulate(Lyra::objectBvh_sp<T> objectBvh)
 			exit(0);
 		}
 
-		PatchSimulate(objectBvh);
+		ImplicitPatchSimulate(objectBvh);//PatchSimulate(objectBvh);
 	}
 
 	//生成新的顶点法线用于渲染

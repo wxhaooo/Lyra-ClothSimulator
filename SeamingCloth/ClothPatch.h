@@ -79,6 +79,14 @@ namespace Lyra
 
 		void ApplySpaceForce(SpaceForceSwitch &spaceForceSwitch);
 
+		void ApplyPlaneForceExplicit(PlaneForceSwitch& globalSwitch);
+
+		void ApplySpaceForceExplicit(SpaceForceSwitch& spaceForceSwitch);
+
+		void ApplyDampingPlaneForceImplicit(PlaneForceSwitch& globalSwitch, T delta_t, VelocityUpdate updateCat);
+
+		void ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t);
+
 		/*Collision Detection Functions*/
 		void CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult);
 
@@ -655,6 +663,53 @@ void Lyra::ClothPatch<T>::ApplyWind(vec3<T> &windVelocity,T density,T cod)
 		tri.X0()->ApplyForce(wind);
 		tri.X1()->ApplyForce(wind);
 		tri.X2()->ApplyForce(wind);
+	}
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::ApplyDampingPlaneForceImplicit(PlaneForceSwitch& globalSwitch, T delta_t, VelocityUpdate updateCat)
+{
+	bool enableDampingStretch = parms.planeForceSwitch.enableDampingStretchForce & globalSwitch.enableDampingStretchForce;
+	bool enableDampingShear = parms.planeForceSwitch.enableDampingShearForce & globalSwitch.enableDampingShearForce;
+
+	for (auto& tri : trianglePatches) {
+
+		if (enableDampingStretch || enableDampingShear)
+			tri.ImplicitDampingPlaneForce(delta_t, enableDampingStretch, enableDampingShear,updateCat);
+	}
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t)
+{
+
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::ApplyPlaneForceExplicit(PlaneForceSwitch& globalSwitch)
+{
+	bool enableStretch = parms.planeForceSwitch.enableStretchForce & globalSwitch.enableStretchForce;
+	bool enableShear = parms.planeForceSwitch.enableShearForce & globalSwitch.enableShearForce;
+
+	for (auto& tri : trianglePatches) {
+
+		if (enableStretch)
+			tri.ExplicitStretchForce();
+
+		if (enableShear)
+			tri.ExplicitShearForce();
+
+	}
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::ApplySpaceForceExplicit(SpaceForceSwitch& spaceForceSwitch)
+{
+	bool enableBendingForce = parms.spaceForceSwitch.enableBendingForce & spaceForceSwitch.enableBendingForce;
+
+	for (auto& adjTri : adjacentTrianglePatches) {
+		if (enableBendingForce)
+			adjTri.ExplicitBendingForce();
 	}
 }
 

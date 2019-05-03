@@ -10,6 +10,7 @@
 namespace Lyra
 {
 	template<typename T> class TrianglePatch;
+	enum VelocityUpdate { PSEUDO_VELOCITY,MIDDLE_VELOCITY,CURRENT_VELOCITY,PRE_VELOCITY};
 }
 
 namespace Lyra
@@ -60,7 +61,7 @@ namespace Lyra
 		void ExplicitStretchForce();
 		void ExplicitShearForce();
 
-		void ImplicitDampingPlaneForce(T delta_t);
+		void ImplicitDampingPlaneForce(T delta_t, bool enableDampingStretch, bool enableDampingShear, VelocityUpdate updateCat);
 
 		void SemiImplicitStretchForce();
 		void SemiImplicitShearForce();
@@ -70,8 +71,10 @@ namespace Lyra
 
 	private:
 		void CollectMassInvMat(mat<T, 9, 9>& massMat);
-		void CollectAMat(mat<T, 9, 9>& AMat, mat<T, 9, 9>& massInvMat, T delta_t);
-		void CollectbVec(vec<T, 9>& bVec);
+		void CollectAMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& shearMat,T delta_t);
+		void CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& massInvMat, T delta_t);
+		void CollectDampingShearMat(mat<T, 9, 9>& shearMat, mat<T, 9, 9>& massInvMat, T delta_t);
+		void CollectbVec(vec<T, 9>& bVec, VelocityUpdate updateCat);
 
 		void SolveLinearSystem(vec<T, 9>& xVec, mat<T, 9, 9>& AMat, vec<T, 9>& bVec);
 
@@ -92,6 +95,11 @@ namespace Lyra
 		uint32 ind0, ind1, ind2;
 
 		mat2<T> theInverse;
+
+		mat<T, 9, 9> massInvMat;
+		mat<T, 9, 9> AMat;
+		vec<T, 9> bVec;
+		vec<T, 9> xVec;
 	};
 }
 
@@ -183,11 +191,11 @@ Lyra::TrianglePatch<T>::TrianglePatch(particle_pt<T> xx1, particle_pt<T> xx2, pa
 template<typename T>
 void Lyra::TrianglePatch<T>::ExplicitStretchForce()
 {
-	vec3<T> deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
-	vec3<T> deltaX2 = x2->pseudoPosition - x0->pseudoPosition;
+	/*vec3<T> deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
+	vec3<T> deltaX2 = x2->pseudoPosition - x0->pseudoPosition;*/
 
-	/*vec3<T> deltaX1 = x1->position - x0->position;
-	vec3<T> deltaX2 = x2->position - x0->position;*/
+	vec3<T> deltaX1 = x1->position - x0->position;
+	vec3<T> deltaX2 = x2->position - x0->position;
 
 	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
 
@@ -249,10 +257,10 @@ void Lyra::TrianglePatch<T>::ExplicitStretchForce()
 template<typename T>
 void Lyra::TrianglePatch<T>::ExplicitShearForce()
 {
-	vec3<T> deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
-	vec3<T> deltaX2 = x2->pseudoPosition - x0->pseudoPosition;
-	/*vec3<T> deltaX1 = x1->position - x0->position;
-	vec3<T> deltaX2 = x2->position - x0->position;*/
+	/*vec3<T> deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
+	vec3<T> deltaX2 = x2->pseudoPosition - x0->pseudoPosition;*/
+	vec3<T> deltaX1 = x1->position - x0->position;
+	vec3<T> deltaX2 = x2->position - x0->position;
 
 	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
 
@@ -406,18 +414,21 @@ void Lyra::TrianglePatch<T>::CollectMassInvMat(mat<T, 9, 9>& massInvMat)
 	T x1Mass = x1->mass;
 	T x2Mass = x2->mass;
 
-	massInvMat.Zero();
 	massInvMat(0, 0) = massInvMat(1, 1) = massInvMat(2, 2) = T(1) / x0Mass;
 	massInvMat(3, 3) = massInvMat(4, 4) = massInvMat(5, 5) = T(1) / x1Mass;
-	massInvMat(6, 6) = massInvMat(7, 7) = massInvMat(8, 8) = T(2) / x2Mass;
+	massInvMat(6, 6) = massInvMat(7, 7) = massInvMat(8, 8) = T(1) / x2Mass;
 }
 
 template<typename T>
-void Lyra::TrianglePatch<T>::CollectAMat(mat<T, 9, 9>& AMat, mat<T, 9, 9>& massInvMat, T delta_t)
+void Lyra::TrianglePatch<T>::CollectAMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& shearMat,T delta_t)
 {
-	AMat.Zero();
-	mat<T, 9, 9> stretchMat, shearMat;
-	stretchMat.Zero(); shearMat.Zero();
+	AMat = mat<T, 9, 9>::Identity() - 0.5 * delta_t * massInvMat * (stretchMat + shearMat);
+}
+
+template<typename T>
+void Lyra::TrianglePatch<T>::CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& massInvMat, T delta_t)
+{
+	stretchMat.Zero(); 
 
 	vec3<T> deltaX1 = x1->position - x0->position;
 	vec3<T> deltaX2 = x2->position - x0->position;
@@ -428,8 +439,6 @@ void Lyra::TrianglePatch<T>::CollectAMat(mat<T, 9, 9>& AMat, mat<T, 9, 9>& massI
 
 	//WUV matrix
 	mat<T, 3, 2> wUV = deltaX12 * theInverse;
-	vec3<T> wU = wUV.col(0);
-	vec3<T> wV = wUV.col(1);
 	//normalized wU,wV
 	vec3<T> wUn = wUV.col(0).normalized();
 	vec3<T> wVn = wUV.col(1).normalized();
@@ -455,6 +464,23 @@ void Lyra::TrianglePatch<T>::CollectAMat(mat<T, 9, 9>& AMat, mat<T, 9, 9>& massI
 
 	T stretchDampingFactor = - stretchCoefficent * dampingStretchCoefficent;
 	stretchMat = stretchDampingFactor * pcpxStretch * pcpxStretchT;
+}
+
+template<typename T>
+void Lyra::TrianglePatch<T>::CollectDampingShearMat(mat<T, 9, 9>& shearMat, mat<T, 9, 9>& massInvMat, T delta_t)
+{
+	shearMat.Zero();
+	vec3<T> deltaX1 = x1->position - x0->position;
+	vec3<T> deltaX2 = x2->position - x0->position;
+
+	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
+	deltaX12.col(0) = deltaX1;
+	deltaX12.col(1) = deltaX2;
+
+	//WUV matrix
+	mat<T, 3, 2> wUV = deltaX12 * theInverse;
+	vec3<T> wU = wUV.col(0);
+	vec3<T> wV = wUV.col(1);
 
 	//Damping Shear Force Matrix Construction 
 	mat<T, 9, 1> pcpxShear = mat<T, 9, 1>::Zero();
@@ -472,18 +498,24 @@ void Lyra::TrianglePatch<T>::CollectAMat(mat<T, 9, 9>& AMat, mat<T, 9, 9>& massI
 
 	T shearDampingFactor = -shearCoefficent * dampingShearCoefficent;
 	shearMat = shearDampingFactor * pcpxShear * pcpxShearT;
-
-	AMat = mat<T, 9, 9>::Identity() - delta_t / 2 * massInvMat * (stretchMat + shearMat);
 }
 
 template<typename T>
-void Lyra::TrianglePatch<T>::CollectbVec(vec<T, 9>& bVec)
+void Lyra::TrianglePatch<T>::CollectbVec(vec<T, 9>& bVec,VelocityUpdate updateCat)
 {
-	vec3<T>& x0Vel = x0->velocity;
-	vec3<T>& x1Vel = x1->velocity;
-	vec3<T>& x2Vel = x2->velocity;
+	vec3<T> x0Vel, x1Vel, x2Vel;
 
-	bVec.Zero();
+	if (updateCat == VelocityUpdate::MIDDLE_VELOCITY) {
+		x0Vel = x0->velocity;
+		x1Vel = x1->velocity;
+		x2Vel = x2->velocity;
+	}
+	else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY) {
+		x0Vel = x0->middleVelocity;
+		x1Vel = x1->middleVelocity;
+		x2Vel = x2->middleVelocity;
+	}
+
 	bVec.block<3, 1>(0, 0) = x0Vel;
 	bVec.block<3, 1>(3, 0) = x1Vel;
 	bVec.block<3, 1>(6, 0) = x2Vel;
@@ -499,20 +531,34 @@ void Lyra::TrianglePatch<T>::SolveLinearSystem(vec<T, 9>& xVec, mat<T, 9, 9>& AM
 }
 
 template<typename T>
-void Lyra::TrianglePatch<T>::ImplicitDampingPlaneForce(T delta_t)
+void Lyra::TrianglePatch<T>::ImplicitDampingPlaneForce(T delta_t, bool enableDampingStretch,bool enableDampingShear, VelocityUpdate updateCat)
 {
-	mat<T, 9, 9> massInvMat;
-	mat<T, 9, 9> AMat;
-	vec<T, 9> bVec;
-	vec<T, 9> xVec;
+	AMat.Zero();
+	massInvMat.Zero();
+	bVec.Zero();
 
+	mat<T, 9, 9> stretchMat, shearMat;
 	CollectMassInvMat(massInvMat);
-	CollectAMat(AMat,massInvMat,delta_t);
-	CollectbVec(bVec);
+
+	if (enableDampingStretch)
+		CollectDampingStretchMat(stretchMat, massInvMat, delta_t);
+
+	if (enableDampingShear)
+		CollectDampingShearMat(shearMat, massInvMat, delta_t);
+
+	CollectAMat(stretchMat, shearMat, delta_t);
+	CollectbVec(bVec,updateCat);
 	SolveLinearSystem(xVec, AMat, bVec);
 
-	x0->velocity = xVec.block<3, 1>(0, 0);
-	x1->velocity = xVec.block<3, 1>(3, 0);
-	x2->velocity = xVec.block<3, 1>(6, 0);
+	if (updateCat == VelocityUpdate::MIDDLE_VELOCITY) {
+		x0->middleVelocity = xVec.block<3, 1>(0, 0);
+		x1->middleVelocity = xVec.block<3, 1>(3, 0);
+		x2->middleVelocity = xVec.block<3, 1>(6, 0);
+	}
+	else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY) {
+		x0->pseudoVelocity = xVec.block<3, 1>(0, 0);
+		x1->pseudoVelocity = xVec.block<3, 1>(3, 0);
+		x2->pseudoVelocity = xVec.block<3, 1>(6, 0);
+	}
 }
 

@@ -34,6 +34,7 @@ namespace Lyra
 		//t-\delta t时刻的速度
 		vec3<T> preVelocity;
 		//t+0.5 * \delta t时刻的速度
+		//这个速度在implicit方法中承担两种作用，第一种作用发挥完后就没用了，可以覆盖
 		vec3<T> middleVelocity;
 		//t+\delta t时刻的速度
 		vec3<T> pseudoVelocity;
@@ -64,6 +65,10 @@ namespace Lyra
 		void UpdatePseudoPositionWithVelocityVerlet(T delta_t);
 
 		void UpdatePseudoVelocityWithVelocityVerlet(T delta_t);
+
+		void UpdateMiddleVelocity(T delta_t);
+
+		void UpdatePesudoPositionImplicit(T delta_t);
 
 		void DebugUpdatePosition(T delta_t);
 
@@ -130,6 +135,8 @@ void Lyra::Particle<T>::AdvanceStep()
 	preAccleration = acceleration;
 	acceleration = pseudoAccleration;
 	pseudoAccleration.setZero();
+	//IMEX的时候需要把accleration置0
+	acceleration.setZero();
 }
 
 template<typename T>
@@ -141,8 +148,8 @@ void Lyra::Particle<T>::ApplyGravity(vec3<T> acc)
 template<typename T>
 void Lyra::Particle<T>::ApplyForce(vec3<T> force)
 {
-	//acceleration += force / mass;
-	pseudoAccleration += force / mass;
+	acceleration += force / mass;
+	//pseudoAccleration += force / mass;
 }
 
 template<typename T>
@@ -173,6 +180,18 @@ template<typename T>
 void Lyra::Particle<T>::EstimateMiddleVelocity(T delta_t)
 {
 	middleVelocity = 1. / delta_t * (pseudoPosition - position);
+}
+
+template<typename T>
+void Lyra::Particle<T>::UpdateMiddleVelocity(T delta_t)
+{
+	middleVelocity = velocity + 0.5 * delta_t * acceleration;
+}
+
+template<typename T>
+void Lyra::Particle<T>::UpdatePesudoPositionImplicit(T delta_t)
+{
+	pseudoPosition = position + delta_t * middleVelocity;
 }
 
 template<typename T>

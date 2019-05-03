@@ -64,16 +64,16 @@ template<typename T>
 void Lyra::AdjacentTrianglePatch<T>::ExplicitBendingForce()
 {
 	//printf_s("23333\n");
-	vec3<T> e02 = p0->pseudoPosition - p2->pseudoPosition;
+	/*vec3<T> e02 = p0->pseudoPosition - p2->pseudoPosition;
 	vec3<T> e03 = p0->pseudoPosition - p3->pseudoPosition;
 	vec3<T> e12 = p1->pseudoPosition - p2->pseudoPosition;
 	vec3<T> e13 = p1->pseudoPosition - p3->pseudoPosition;
-	vec3<T> E = p3->pseudoPosition - p2->pseudoPosition;
-	/*vec3<T> e02 = p0->position - p2->position;
+	vec3<T> E = p3->pseudoPosition - p2->pseudoPosition;*/
+	vec3<T> e02 = p0->position - p2->position;
 	vec3<T> e03 = p0->position - p3->position;
 	vec3<T> e12 = p1->position - p2->position;
 	vec3<T> e13 = p1->position - p3->position;
-	vec3<T> E = p3->position - p2->position;*/
+	vec3<T> E = p3->position - p2->position;
 
 	vec3<T> N1 = e02.cross(e03);
 	vec3<T> N2 = e13.cross(e12);
