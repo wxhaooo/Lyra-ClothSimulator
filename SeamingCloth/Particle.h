@@ -31,6 +31,8 @@ namespace Lyra
 		vec3<T> pseudoPosition;
 		//t时刻的速度
 		vec3<T> velocity;
+		//临时的t+\litte时刻的速度
+		vec3<T> velocityTmp;
 		//t-\delta t时刻的速度
 		vec3<T> preVelocity;
 		//t+0.5 * \delta t时刻的速度
@@ -102,6 +104,7 @@ Lyra::Particle<T>::Particle(vec2<T> &planeCoord, vec3<T> &worldPos, T mass, bool
 	pseudoPosition = worldPos;
 
 	velocity.setZero();
+	velocityTmp.setZero();
 	preVelocity.setZero();
 	middleVelocity.setZero();
 	pseudoVelocity.setZero();
@@ -128,6 +131,7 @@ void Lyra::Particle<T>::AdvanceStep()
 
 	preVelocity = velocity;
 	velocity = pseudoVelocity;
+	velocityTmp = pseudoVelocity;
 
 	middleVelocity.setZero();
 	pseudoVelocity.setZero();
@@ -142,13 +146,14 @@ void Lyra::Particle<T>::AdvanceStep()
 template<typename T>
 void Lyra::Particle<T>::ApplyGravity(vec3<T> acc)
 {
-	pseudoAccleration += acc;
+	acceleration += acc;
+	//pseudoAccleration += acc;
 }
 
 template<typename T>
 void Lyra::Particle<T>::ApplyForce(vec3<T> force)
 {
-	acceleration += force / mass;
+	acceleration += (force / mass);
 	//pseudoAccleration += force / mass;
 }
 
@@ -179,7 +184,7 @@ void Lyra::Particle<T>::UpdatePosition(T delta_t)
 template<typename T>
 void Lyra::Particle<T>::EstimateMiddleVelocity(T delta_t)
 {
-	middleVelocity = 1. / delta_t * (pseudoPosition - position);
+	middleVelocity = T(1) / delta_t * (pseudoPosition - position);
 }
 
 template<typename T>

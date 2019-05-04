@@ -165,6 +165,8 @@ namespace Lyra
 		void UpdatePesudoPositionWithVelocityVerlet();
 		void UpdatePesudoVelocityWithVelocityVerlet();
 
+		void UpdateDampingForceMiddleVelocity(VelocityUpdate updateCat);
+
 		void ApplyDampingForceImplicit(VelocityUpdate updateCat);
 		void UpdatePesudoPositionImplicit();
 		void ApplyInternalForceExplicit();
@@ -403,12 +405,27 @@ void Lyra::Cloth<T>::UpdatePosition()
 }
 
 template<typename T>
+void Lyra::Cloth<T>::UpdateDampingForceMiddleVelocity(VelocityUpdate updateCat)
+{
+	for (auto& p : particles) {
+		if (p.movable) {
+			if (updateCat == VelocityUpdate::MIDDLE_VELOCITY)
+				p.middleVelocity += p.velocity;
+			else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY)
+				p.pseudoVelocity += p.middleVelocity;
+		}
+	}
+}
+
+template<typename T>
 void Lyra::Cloth<T>::ApplyDampingForceImplicit(VelocityUpdate updateCat)
 {
 	for (auto& patch : patches) {
 		patch->ApplyDampingPlaneForceImplicit(parms.planeForceSwitch, parms.delta_t, updateCat);
-		patch->ApplyDampingSpaceForceImplicit(parms.spaceForceSwitch, parms.delta_t);
+		//patch->ApplyDampingSpaceForceImplicit(parms.spaceForceSwitch, parms.delta_t);
 	}
+
+	UpdateDampingForceMiddleVelocity(updateCat);
 }
 
 template<typename T>
@@ -425,7 +442,7 @@ void Lyra::Cloth<T>::ApplyInternalForceExplicit()
 {
 	for (auto& patch : patches) {
 		patch->ApplyPlaneForceExplicit(parms.planeForceSwitch);
-		patch->ApplySpaceForceExplicit(parms.spaceForceSwitch);
+		//patch->ApplySpaceForceExplicit(parms.spaceForceSwitch);
 	}
 }
 
@@ -433,7 +450,8 @@ template<typename T>
 void Lyra::Cloth<T>::ApplyGravity()
 {
 	for (auto &p : particles) {
-		p.ApplyGravity(parms.gravity);
+		if (p.movable)
+			p.ApplyGravity(parms.gravity);
 	}
 }
 
@@ -777,7 +795,8 @@ template<typename T>
 void Lyra::Cloth<T>::UpdateMiddleVelocity()
 {
 	for (auto& p : particles) {
-		p.UpdateMiddleVelocity(parms.delta_t);
+		if (p.movable)
+			p.UpdateMiddleVelocity(parms.delta_t);
 	}
 }
 
@@ -789,6 +808,7 @@ void Lyra::Cloth<T>::ImplicitPatchSimulate(Lyra::objectBvh_sp<T> objectBvh)
 
 	ApplyDampingForceImplicit(VelocityUpdate::MIDDLE_VELOCITY);
 	UpdatePesudoPositionImplicit();
+	ApplyExternalForce();
 	ApplyInternalForceExplicit();
 	UpdateMiddleVelocity();
 	ApplyDampingForceImplicit(VelocityUpdate::PSEUDO_VELOCITY);
@@ -810,6 +830,7 @@ void Lyra::Cloth<T>::ImplicitPatchSimulate(Lyra::objectBvh_sp<T> objectBvh)
 			SimpleCollisionResponseWithRigidbody(collisionResults_C2O, friction, damping);
 		}
 	}
+
 	AdvanceStep();
 }
 

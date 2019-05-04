@@ -72,8 +72,8 @@ namespace Lyra
 	private:
 		void CollectMassInvMat(mat<T, 9, 9>& massMat);
 		void CollectAMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& shearMat,T delta_t);
-		void CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& massInvMat, T delta_t);
-		void CollectDampingShearMat(mat<T, 9, 9>& shearMat, mat<T, 9, 9>& massInvMat, T delta_t);
+		void CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& massInvMat, VelocityUpdate velUpdateCat);
+		void CollectDampingShearMat(mat<T, 9, 9>& shearMat, mat<T, 9, 9>& massInvMat, VelocityUpdate velUpdateCat);
 		void CollectbVec(vec<T, 9>& bVec, VelocityUpdate updateCat);
 
 		void SolveLinearSystem(vec<T, 9>& xVec, mat<T, 9, 9>& AMat, vec<T, 9>& bVec);
@@ -414,6 +414,8 @@ void Lyra::TrianglePatch<T>::CollectMassInvMat(mat<T, 9, 9>& massInvMat)
 	T x1Mass = x1->mass;
 	T x2Mass = x2->mass;
 
+	//std::cout << x0Mass << " " << x1Mass << " " << x2Mass << "\n";
+
 	massInvMat(0, 0) = massInvMat(1, 1) = massInvMat(2, 2) = T(1) / x0Mass;
 	massInvMat(3, 3) = massInvMat(4, 4) = massInvMat(5, 5) = T(1) / x1Mass;
 	massInvMat(6, 6) = massInvMat(7, 7) = massInvMat(8, 8) = T(1) / x2Mass;
@@ -426,12 +428,20 @@ void Lyra::TrianglePatch<T>::CollectAMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>&
 }
 
 template<typename T>
-void Lyra::TrianglePatch<T>::CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& massInvMat, T delta_t)
+void Lyra::TrianglePatch<T>::CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, mat<T, 9, 9>& massInvMat, VelocityUpdate velUpdateCat)
 {
-	stretchMat.Zero(); 
+	stretchMat.setZero(); 
 
-	vec3<T> deltaX1 = x1->position - x0->position;
-	vec3<T> deltaX2 = x2->position - x0->position;
+	vec3<T> deltaX1, deltaX2;
+
+	if (velUpdateCat == VelocityUpdate::MIDDLE_VELOCITY) {
+		deltaX1 = x1->position - x0->position;
+		deltaX2 = x2->position - x0->position;
+	}
+	else if (velUpdateCat == VelocityUpdate::PSEUDO_VELOCITY) {
+		deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
+		deltaX2 = x2->pseudoPosition - x0->pseudoPosition;
+	}
 
 	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
 	deltaX12.col(0) = deltaX1;
@@ -467,11 +477,19 @@ void Lyra::TrianglePatch<T>::CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, 
 }
 
 template<typename T>
-void Lyra::TrianglePatch<T>::CollectDampingShearMat(mat<T, 9, 9>& shearMat, mat<T, 9, 9>& massInvMat, T delta_t)
+void Lyra::TrianglePatch<T>::CollectDampingShearMat(mat<T, 9, 9>& shearMat, mat<T, 9, 9>& massInvMat, VelocityUpdate velUpdateCat)
 {
-	shearMat.Zero();
-	vec3<T> deltaX1 = x1->position - x0->position;
-	vec3<T> deltaX2 = x2->position - x0->position;
+	shearMat.setZero();
+	vec3<T> deltaX1, deltaX2;
+
+	if (velUpdateCat == VelocityUpdate::MIDDLE_VELOCITY) {
+		deltaX1 = x1->position - x0->position;
+		deltaX2 = x2->position - x0->position;
+	}
+	else if (velUpdateCat == VelocityUpdate::PSEUDO_VELOCITY) {
+		deltaX1 = x1->pseudoPosition - x0->pseudoPosition;
+		deltaX2 = x2->pseudoPosition - x0->pseudoPosition;
+	}
 
 	mat<T, 3, 2> deltaX12 = mat<T, 3, 2>::Zero();
 	deltaX12.col(0) = deltaX1;
@@ -509,6 +527,9 @@ void Lyra::TrianglePatch<T>::CollectbVec(vec<T, 9>& bVec,VelocityUpdate updateCa
 		x0Vel = x0->velocity;
 		x1Vel = x1->velocity;
 		x2Vel = x2->velocity;
+		/*x0Vel = x0->velocityTmp;
+		x1Vel = x1->velocityTmp;
+		x2Vel = x2->velocityTmp;*/
 	}
 	else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY) {
 		x0Vel = x0->middleVelocity;
@@ -527,38 +548,61 @@ void Lyra::TrianglePatch<T>::SolveLinearSystem(vec<T, 9>& xVec, mat<T, 9, 9>& AM
 	Eigen::ColPivHouseholderQR<mat<T, 9, 9>> solver(AMat);
 	xVec = solver.solve(bVec);
 
-	std::cout << "relative error is: " << (AMat * xVec - bVec).norm() / bVec.norm();
+	//std::cout << xVec << "\n";
+	//std::cout << AMat << "\n\n";
+	//std::cout << bVec << "\n\n";
+	
+	//T relativeError;
+	//if(!IsZero(bVec.norm()))
+	//	relativeError = (AMat * xVec - bVec).norm() / bVec.norm();
+	//else
+	//	relativeError = (AMat * xVec - bVec).norm();
+
+	///*std::cout << AMat << "\n";
+	//std::cout << bVec << "\n";
+	//std::cout << xVec << "\n";*/
+	//std::cout << "relative error is: " << relativeError << "\n";
 }
 
 template<typename T>
 void Lyra::TrianglePatch<T>::ImplicitDampingPlaneForce(T delta_t, bool enableDampingStretch,bool enableDampingShear, VelocityUpdate updateCat)
 {
-	AMat.Zero();
-	massInvMat.Zero();
-	bVec.Zero();
+	AMat.setZero();
+	massInvMat.setZero();
+	bVec.setZero();
+
+	//std::cout << massInvMat << "\n\n";
 
 	mat<T, 9, 9> stretchMat, shearMat;
 	CollectMassInvMat(massInvMat);
 
+	//std::cout << massInvMat << "\n";
+
 	if (enableDampingStretch)
-		CollectDampingStretchMat(stretchMat, massInvMat, delta_t);
+		CollectDampingStretchMat(stretchMat, massInvMat, updateCat);
 
 	if (enableDampingShear)
-		CollectDampingShearMat(shearMat, massInvMat, delta_t);
+		CollectDampingShearMat(shearMat, massInvMat, updateCat);
 
 	CollectAMat(stretchMat, shearMat, delta_t);
 	CollectbVec(bVec,updateCat);
 	SolveLinearSystem(xVec, AMat, bVec);
 
 	if (updateCat == VelocityUpdate::MIDDLE_VELOCITY) {
-		x0->middleVelocity = xVec.block<3, 1>(0, 0);
-		x1->middleVelocity = xVec.block<3, 1>(3, 0);
-		x2->middleVelocity = xVec.block<3, 1>(6, 0);
+		x0->middleVelocity += (xVec.block<3, 1>(0, 0) - x0->velocity);
+		x1->middleVelocity += (xVec.block<3, 1>(3, 0) - x1->velocity);
+		x2->middleVelocity += (xVec.block<3, 1>(6, 0) - x2->velocity);
+		/*x0->velocityTmp = (xVec.block<3, 1>(0, 0));
+		x1->velocityTmp = (xVec.block<3, 1>(3, 0));
+		x2->velocityTmp = (xVec.block<3, 1>(6, 0));*/
 	}
 	else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY) {
-		x0->pseudoVelocity = xVec.block<3, 1>(0, 0);
-		x1->pseudoVelocity = xVec.block<3, 1>(3, 0);
-		x2->pseudoVelocity = xVec.block<3, 1>(6, 0);
+		x0->pseudoVelocity += (xVec.block<3, 1>(0, 0) - x0->middleVelocity);
+		x1->pseudoVelocity += (xVec.block<3, 1>(3, 0) - x1->middleVelocity);
+		x2->pseudoVelocity += (xVec.block<3, 1>(6, 0) - x2->middleVelocity);
+		/*x0->middleVelocity = (xVec.block<3, 1>(0, 0));
+		x1->middleVelocity = (xVec.block<3, 1>(3, 0));
+		x2->middleVelocity = (xVec.block<3, 1>(6, 0));*/
 	}
 }
 

@@ -185,11 +185,11 @@ int main()
 		///@(do_1)问题解决，可以缝合，积分方法问题
 		parms0.stretchingFactor = 151.503906f;
 		parms0.shearingFactor = 30.250183f;
-		parms0.bendingFactor =/* 0.0f;*/ 117.070122e-6f;
+		parms0.bendingFactor = 0.0f; /*117.070122e-6f*/;
 		///damping stretch引起的问题，可能是solver不能解刚性过大的系统
 		parms0.dampingStretchFactor = 0.1f;
 		parms0.dampingShearFactor = 0.1f;
-		parms0.dampingBendingFactor = /*0.0f;*/ 1 * 117.070122e-7f;
+		parms0.dampingBendingFactor = 0.0f; /*1 * 117.070122e-7f*/;
 		parms0.stretchScaleUDir = 1.f;
 		parms0.stretchScaleVDir = 1.f;
 
@@ -426,7 +426,7 @@ int main()
 		clothParms.enableSeaming = false;
 
 		//collision detect
-		clothParms.enableCollisionDetect = true;
+		clothParms.enableCollisionDetect = false;
 
 		clothParms.bvhShader = bvhShader;
 	}
