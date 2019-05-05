@@ -409,10 +409,19 @@ void Lyra::Cloth<T>::UpdateDampingForceMiddleVelocity(VelocityUpdate updateCat)
 {
 	for (auto& p : particles) {
 		if (p.movable) {
-			if (updateCat == VelocityUpdate::MIDDLE_VELOCITY)
+			if (updateCat == VelocityUpdate::MIDDLE_VELOCITY) {
+				/*std::cout << p.middleVelocity.norm()  << " ";
+				std::cout << p.velocity.norm() << "\n\n";*/
 				p.middleVelocity += p.velocity;
-			else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY)
+				//std::cout << p.middleVelocity << "\n\n";
+			}
+			else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY) {
+				//修正的累积量
+				/*std::cout << p.pseudoVelocity.norm() <<" ";
+				std::cout << p.middleVelocity.norm() << "\n\n";*/
 				p.pseudoVelocity += p.middleVelocity;
+				//std::cout << p.pseudoVelocity << "\n";
+			}
 		}
 	}
 }
@@ -422,7 +431,7 @@ void Lyra::Cloth<T>::ApplyDampingForceImplicit(VelocityUpdate updateCat)
 {
 	for (auto& patch : patches) {
 		patch->ApplyDampingPlaneForceImplicit(parms.planeForceSwitch, parms.delta_t, updateCat);
-		//patch->ApplyDampingSpaceForceImplicit(parms.spaceForceSwitch, parms.delta_t);
+		//patch->ApplyDampingSpaceForceImplicit(parms.spaceForceSwitch, parms.delta_t, updateCat);
 	}
 
 	UpdateDampingForceMiddleVelocity(updateCat);
@@ -442,7 +451,7 @@ void Lyra::Cloth<T>::ApplyInternalForceExplicit()
 {
 	for (auto& patch : patches) {
 		patch->ApplyPlaneForceExplicit(parms.planeForceSwitch);
-		//patch->ApplySpaceForceExplicit(parms.spaceForceSwitch);
+		patch->ApplySpaceForceExplicit(parms.spaceForceSwitch);
 	}
 }
 

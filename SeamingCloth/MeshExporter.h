@@ -29,6 +29,9 @@ namespace Lyra
 		MeshExporter() = default;
 		~MeshExporter() = default;
 
+		bool Save(std::vector<vec3<T>>& vertices, std::vector<vec3<T>>& normals, std::vector<vec3<uint32>>& indices,
+			std::string& fileName, std::string& filePath, MeshExporterSwitch exporterSwitch = MeshExporterSwitch::MESH_EXPORTER_VERTICES_NORMALS);
+
 		bool Save(std::vector<vec3<T>>& vertices, std::vector<vec2<T>>& texCoords,
 			std::vector<vec3<T>>& normals, std::vector<vec3<uint32>>& indices,
 			std::string& fileName, std::string& filePath, MeshExporterSwitch exporterSwitch = MeshExporterSwitch::MESH_EXPORTER_ALL);
@@ -42,6 +45,28 @@ namespace Lyra
 		void DumpFaces(std::vector<vec3<uint32>>& indices, MeshExporterSwitch exporterSwitch = MeshExporterSwitch::MESH_EXPORTER_ALL);
 	};
 }
+
+template<typename T>
+bool Lyra::MeshExporter<T>::Save(std::vector<vec3<T>>& vertices, std::vector<vec3<T>>& normals, std::vector<vec3<uint32>>& indices,
+	std::string& fileName, std::string& filePath, MeshExporterSwitch exporterSwitch)
+{
+	bool isCreted = Create(fileName, filePath);
+	if (!isCreted) return false;
+
+	ofs << "# OBJ file:\"Cloth\"" << std::endl;
+	ofs << "o Cloth" << std::endl;
+
+	DumpVertices(vertices);
+
+	if (exporterSwitch == MeshExporterSwitch::MESH_EXPORTER_VERTICES_NORMALS ||
+		exporterSwitch == MeshExporterSwitch::MESH_EXPORTER_ALL)
+		DumpNormals(normals);
+
+	DumpFaces(indices, exporterSwitch);
+	ofs.close();
+	return true;
+}
+
 
 template<typename T>
 bool Lyra::MeshExporter<T>::Save(std::vector<vec3<T>>& vertices, std::vector<vec2<T>>& texCoords,

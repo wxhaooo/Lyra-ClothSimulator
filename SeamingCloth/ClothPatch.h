@@ -85,7 +85,7 @@ namespace Lyra
 
 		void ApplyDampingPlaneForceImplicit(PlaneForceSwitch& globalSwitch, T delta_t, VelocityUpdate updateCat);
 
-		void ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t);
+		void ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t, VelocityUpdate updateCat);
 
 		/*Collision Detection Functions*/
 		void CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult);
@@ -680,9 +680,14 @@ void Lyra::ClothPatch<T>::ApplyDampingPlaneForceImplicit(PlaneForceSwitch& globa
 }
 
 template<typename T>
-void Lyra::ClothPatch<T>::ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t)
+void Lyra::ClothPatch<T>::ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t, VelocityUpdate updateCat)
 {
+	bool enableDampingBendingForce = parms.spaceForceSwitch.enableDampingBendingForce & spaceForceSwitch.enableDampingBendingForce;
 
+	for (auto& adjTri : adjacentTrianglePatches) {
+		if (enableDampingBendingForce)
+			adjTri.ImplicitDampingBendingForce(delta_t, updateCat);
+	}
 }
 
 template<typename T>

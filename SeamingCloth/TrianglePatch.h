@@ -10,7 +10,6 @@
 namespace Lyra
 {
 	template<typename T> class TrianglePatch;
-	enum VelocityUpdate { PSEUDO_VELOCITY,MIDDLE_VELOCITY,CURRENT_VELOCITY,PRE_VELOCITY};
 }
 
 namespace Lyra
@@ -455,6 +454,8 @@ void Lyra::TrianglePatch<T>::CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, 
 
 	//Damping Stretch Force Matrix Construction
 	mat<T, 3, 2> pcpx0_sch, pcpx1_sch, pcpx2_sch;
+	mat<T, 2, 3> pcpx0_schT, pcpx1_schT, pcpx2_schT;
+
 	pcpx0_sch.col(0) = area * wux0 * wUn;
 	pcpx0_sch.col(1) = area * wvx0 * wVn;
 
@@ -464,16 +465,28 @@ void Lyra::TrianglePatch<T>::CollectDampingStretchMat(mat<T, 9, 9>& stretchMat, 
 	pcpx2_sch.col(0) = area * wux2 * wUn;
 	pcpx2_sch.col(1) = area * wvx2 * wVn;
 
-	mat<T, 9, 2> pcpxStretch = mat<T, 9, 2>::Zero();
+	pcpx0_schT = pcpx0_sch.transpose();
+	pcpx1_schT = pcpx1_sch.transpose();
+	pcpx2_schT = pcpx2_sch.transpose();
+
+	T stretchDampingFactor = -stretchCoefficent * dampingStretchCoefficent;
+
+	mat<T, 3, 3> dampingMatP0 = stretchDampingFactor * pcpx0_sch * pcpx0_schT;
+	mat<T, 3, 3> dampingMatP1 = stretchDampingFactor * pcpx1_sch * pcpx1_schT;
+	mat<T, 3, 3> dampingMatP2 = stretchDampingFactor * pcpx2_sch * pcpx2_schT;
+
+	stretchMat.block<3, 3>(0, 0) = dampingMatP0;
+	stretchMat.block<3, 3>(3, 3) = dampingMatP1;
+	stretchMat.block<3, 3>(6, 6) = dampingMatP2;
+
+	//std::cout << stretchMat << "\n\n";
+	/*mat<T, 9, 2> pcpxStretch = mat<T, 9, 2>::Zero();
 	mat<T, 2, 9> pcpxStretchT = mat<T, 2, 9>::Zero();
 
 	pcpxStretch.block<3, 2>(0, 0) = pcpx0_sch;
 	pcpxStretch.block<3, 2>(3, 0) = pcpx1_sch;
 	pcpxStretch.block<3, 2>(6, 0) = pcpx2_sch;
-	pcpxStretchT = pcpxStretch.transpose();
-
-	T stretchDampingFactor = - stretchCoefficent * dampingStretchCoefficent;
-	stretchMat = stretchDampingFactor * pcpxStretch * pcpxStretchT;
+	pcpxStretchT = pcpxStretch.transpose();*/
 }
 
 template<typename T>
@@ -501,21 +514,27 @@ void Lyra::TrianglePatch<T>::CollectDampingShearMat(mat<T, 9, 9>& shearMat, mat<
 	vec3<T> wV = wUV.col(1);
 
 	//Damping Shear Force Matrix Construction 
-	mat<T, 9, 1> pcpxShear = mat<T, 9, 1>::Zero();
-	mat<T, 1, 9> pcpxShearT = mat<T, 1, 9>::Zero();
-
 	vec3<T> pcpx0_sh, pcpx1_sh, pcpx2_sh;
-	pcpx0_sh = vec3<T>(wux0 * wV(0) + wvx0 * wU(0), wux0 * wV(1) + wvx0 * wU(1), wux0 * wV(2) + wvx0 * wU(2));
-	pcpx1_sh = vec3<T>(wux1 * wV(0) + wvx1 * wU(0), wux1 * wV(1) + wvx1 * wU(1), wux1 * wV(2) + wvx1 * wU(2));
-	pcpx2_sh = vec3<T>(wux2 * wV(0) + wvx2 * wU(0), wux2 * wV(1) + wvx2 * wU(1), wux2 * wV(2) + wvx2 * wU(2));
+	mat<T, 1, 3> pcpx0_shT, pcpx1_shT, pcpx2_shT;
+	pcpx0_sh = area * vec3<T>(wux0 * wV(0) + wvx0 * wU(0), wux0 * wV(1) + wvx0 * wU(1), wux0 * wV(2) + wvx0 * wU(2));
+	pcpx1_sh = area * vec3<T>(wux1 * wV(0) + wvx1 * wU(0), wux1 * wV(1) + wvx1 * wU(1), wux1 * wV(2) + wvx1 * wU(2));
+	pcpx2_sh = area * vec3<T>(wux2 * wV(0) + wvx2 * wU(0), wux2 * wV(1) + wvx2 * wU(1), wux2 * wV(2) + wvx2 * wU(2));
 
-	pcpxShear.block<3, 1>(0, 0) = pcpx0_sh;
-	pcpxShear.block<3, 1>(3, 0) = pcpx1_sh;
-	pcpxShear.block<3, 1>(6, 0) = pcpx2_sh;
-	pcpxShearT = pcpxShear.transpose();
+	pcpx0_shT = pcpx0_sh.transpose();
+	pcpx1_shT = pcpx1_sh.transpose(); 
+	pcpx2_shT = pcpx2_sh.transpose();
 
 	T shearDampingFactor = -shearCoefficent * dampingShearCoefficent;
-	shearMat = shearDampingFactor * pcpxShear * pcpxShearT;
+
+	mat<T, 3, 3> dampingMatP0 = shearDampingFactor * pcpx0_sh * pcpx0_shT;
+	mat<T, 3, 3> dampingMatP1 = shearDampingFactor * pcpx1_sh * pcpx1_shT;
+	mat<T, 3, 3> dampingMatP2 = shearDampingFactor * pcpx2_sh * pcpx2_shT;
+
+	shearMat.block<3, 3>(0, 0) = dampingMatP0;
+	shearMat.block<3, 3>(3, 3) = dampingMatP1;
+	shearMat.block<3, 3>(6, 6) = dampingMatP2;
+
+	//std::cout << shearMat << "\n\n";
 }
 
 template<typename T>
@@ -545,22 +564,25 @@ void Lyra::TrianglePatch<T>::CollectbVec(vec<T, 9>& bVec,VelocityUpdate updateCa
 template<typename T>
 void Lyra::TrianglePatch<T>::SolveLinearSystem(vec<T, 9>& xVec, mat<T, 9, 9>& AMat, vec<T, 9>& bVec)
 {
+	//Eigen::BDCSVD< mat<T, 9, 9>> solver(AMat, );
 	Eigen::ColPivHouseholderQR<mat<T, 9, 9>> solver(AMat);
 	xVec = solver.solve(bVec);
 
-	//std::cout << xVec << "\n";
+	/*xVec = AMat.bdcSvd(Eigen::ComputeFullU | Eigen::ComputeFullV).solve(bVec);*/
+
+	//std::cout << xVec << "\n\n";
 	//std::cout << AMat << "\n\n";
 	//std::cout << bVec << "\n\n";
 	
 	//T relativeError;
-	//if(!IsZero(bVec.norm()))
+	///*if (!IsZero(bVec.norm()))
 	//	relativeError = (AMat * xVec - bVec).norm() / bVec.norm();
-	//else
+	//else*/
 	//	relativeError = (AMat * xVec - bVec).norm();
 
-	///*std::cout << AMat << "\n";
-	//std::cout << bVec << "\n";
-	//std::cout << xVec << "\n";*/
+	/////*std::cout << AMat << "\n";
+	////std::cout << bVec << "\n";
+	////std::cout << xVec << "\n";*/
 	//std::cout << "relative error is: " << relativeError << "\n";
 }
 
@@ -570,6 +592,7 @@ void Lyra::TrianglePatch<T>::ImplicitDampingPlaneForce(T delta_t, bool enableDam
 	AMat.setZero();
 	massInvMat.setZero();
 	bVec.setZero();
+	xVec.setZero();
 
 	//std::cout << massInvMat << "\n\n";
 
@@ -589,6 +612,7 @@ void Lyra::TrianglePatch<T>::ImplicitDampingPlaneForce(T delta_t, bool enableDam
 	SolveLinearSystem(xVec, AMat, bVec);
 
 	if (updateCat == VelocityUpdate::MIDDLE_VELOCITY) {
+		//accumulation of delta v
 		x0->middleVelocity += (xVec.block<3, 1>(0, 0) - x0->velocity);
 		x1->middleVelocity += (xVec.block<3, 1>(3, 0) - x1->velocity);
 		x2->middleVelocity += (xVec.block<3, 1>(6, 0) - x2->velocity);

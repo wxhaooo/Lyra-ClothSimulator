@@ -160,7 +160,7 @@ int main()
 	Lyra::SeamingInfo<Type> seamingInfo1;
 	Lyra::ClothParms<Type> clothParms;
 
-	std::vector<uint32> stickPoints0 = { 3,205,213/*3,205,28,92,217,2*//*134,235,208,209*/ };
+	std::vector<uint32> stickPoints0 = { /*3,205,213*//*3,205,28,92,217,2*//*134,235,208,209*/ };
 	std::vector<uint32> stickPoints1 = { /*4,5,6*/ };
 	//patch0 Parms
 	{
@@ -185,16 +185,16 @@ int main()
 		///@(do_1)问题解决，可以缝合，积分方法问题
 		parms0.stretchingFactor = 151.503906f;
 		parms0.shearingFactor = 30.250183f;
-		parms0.bendingFactor = 0.0f; /*117.070122e-6f*/;
-		///damping stretch引起的问题，可能是solver不能解刚性过大的系统
-		parms0.dampingStretchFactor = 0.1f;
-		parms0.dampingShearFactor = 0.1f;
-		parms0.dampingBendingFactor = 0.0f; /*1 * 117.070122e-7f*/;
+		parms0.bendingFactor = 0 * 117.070122e-6f;
+		///range of damping factor????(19-05-05)
+		parms0.dampingStretchFactor = 0.2f;
+		parms0.dampingShearFactor = 0.2f;
+		parms0.dampingBendingFactor = 0 * 117.070122e-7f;
 		parms0.stretchScaleUDir = 1.f;
 		parms0.stretchScaleVDir = 1.f;
 
 		//石头的摩擦力
-		parms0.frictionFactorForObject = 0.0f;
+		parms0.frictionFactorForObject = 0.8f;
 		parms0.dampingFactorForObject = 0.1f;
 
 		parms0.planeForceSwitch.enableStretchForce = true;
@@ -505,7 +505,7 @@ int main()
 
 		bodyShader.use();
 		bodyShader.setMat4("MVP", MVP);
-		//body->GlDrawModel(bodyShader, lineMode);
+		body->GlDrawModel(bodyShader, lineMode);
 
 		//cloth->GlDrawBvh(camera);
 

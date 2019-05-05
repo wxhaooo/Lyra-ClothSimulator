@@ -6,6 +6,7 @@
 namespace Lyra
 {
 	template<typename T> struct Particle;
+	enum VelocityUpdate { PSEUDO_VELOCITY, MIDDLE_VELOCITY, CURRENT_VELOCITY, PRE_VELOCITY };
 }
 
 namespace Lyra
@@ -101,7 +102,7 @@ Lyra::Particle<T>::Particle(vec2<T> &planeCoord, vec3<T> &worldPos, T mass, bool
 
 	position = worldPos;
 	prePosition = worldPos;
-	pseudoPosition = worldPos;
+	pseudoPosition.setZero();
 
 	velocity.setZero();
 	velocityTmp.setZero();
