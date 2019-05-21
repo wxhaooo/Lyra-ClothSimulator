@@ -30,7 +30,7 @@ namespace Lyra
 
 	private:
 		void CollectMassInvMat(mat<T, 12, 12>& massMat);
-		void CollectAMat(mat<T, 12, 12>& bendingMat, mat<T, 12, 12>& Amat, T delta_t);
+		void CollectAMat(mat<T, 12, 12>& Amat, mat<T, 12, 12>& bendingMat,  T delta_t);
 		void CollectDampingBendingMat(mat<T, 12, 12>& bendingMat, mat<T, 12, 12>& massInvMat, VelocityUpdate updateCat);
 		void CollectbVec(vec<T, 12>& bVec, VelocityUpdate updateCat);
 
@@ -80,16 +80,16 @@ template<typename T>
 void Lyra::AdjacentTrianglePatch<T>::ExplicitBendingForce()
 {
 	//printf_s("23333\n");
-	/*vec3<T> e02 = p0->pseudoPosition - p2->pseudoPosition;
+	vec3<T> e02 = p0->pseudoPosition - p2->pseudoPosition;
 	vec3<T> e03 = p0->pseudoPosition - p3->pseudoPosition;
 	vec3<T> e12 = p1->pseudoPosition - p2->pseudoPosition;
 	vec3<T> e13 = p1->pseudoPosition - p3->pseudoPosition;
-	vec3<T> E = p3->pseudoPosition - p2->pseudoPosition;*/
-	vec3<T> e02 = p0->position - p2->position;
-	vec3<T> e03 = p0->position - p3->position;
-	vec3<T> e12 = p1->position - p2->position;
-	vec3<T> e13 = p1->position - p3->position;
-	vec3<T> E = p3->position - p2->position;
+	vec3<T> E = p3->pseudoPosition - p2->pseudoPosition;
+	//vec3<T> e02 = p0->position - p2->position;
+	//vec3<T> e03 = p0->position - p3->position;
+	//vec3<T> e12 = p1->position - p2->position;
+	//vec3<T> e13 = p1->position - p3->position;
+	//vec3<T> E = p3->position - p2->position;
 
 	vec3<T> N1 = e02.cross(e03);
 	vec3<T> N2 = e13.cross(e12);
@@ -107,16 +107,25 @@ void Lyra::AdjacentTrianglePatch<T>::ExplicitBendingForce()
 	//这里可能得到-0，结果就得到sqrt()得到NaN，所以加个abs()
 	//判断是不是NaN的方法,if(A!=A){......}
 	T sinHalf = sqrt(std::abs((1.0f - n1.dot(n2)) / 2.0f));
+	//std::cout << sinHalf << "\n";
 	//T sinHalf = (std::sin(SafeACos(n1.dot(n2))) - std::sin(restAngle));
+	//std::cout << sinHalf << "\n";
+	//std::cout << restAngle << "\n";
 	if (!IsZero(sinHalf)) {
 		if (n1.cross(n2).dot(E.normalized()) < 0) { sinHalf = -sinHalf; }
-		T bendFactor = bendingCoefficent * std::pow(El, 2)*sinHalf / (N1l2 + N2l2);
+		T bendFactor = bendingCoefficent * std::pow(El, 2) * sinHalf / (N1l2 + N2l2);
 
-		/*std::cout << (u1 * bendFactor).norm() << "\n";
-		std::cout << (u2 * bendFactor).norm() << "\n";
-		std::cout << (u3 * bendFactor).norm() << "\n";
-		std::cout << (u4 * bendFactor).norm() << "\n";*/
-
+		//std::cout << sinHalf << "\n";
+		/*std::cout << u1.norm() << "\n";
+		std::cout << u2.norm() << "\n";
+		std::cout << u3.norm() << "\n";
+		std::cout << u4.norm() << "\n";*/
+		//std::cout << bendFactor << "\n";
+		/*std::cout << (u1 * bendFactor).norm() / p0->mass << "\n";
+		std::cout << (u2 * bendFactor).norm() / p1->mass << "\n";
+		std::cout << (u3 * bendFactor).norm() / p2->mass << "\n";
+		std::cout << (u4 * bendFactor).norm() / p3->mass << "\n";*/
+		//std::cout << "23333\n";
 		p0->ApplyForce(u1 * bendFactor);
 		p1->ApplyForce(u2 * bendFactor);
 		p2->ApplyForce(u3 * bendFactor);
@@ -127,11 +136,11 @@ void Lyra::AdjacentTrianglePatch<T>::ExplicitBendingForce()
 template<typename T>
 void Lyra::AdjacentTrianglePatch<T>::ExplicitDampingBendingForce()
 {
-	//vec3<T> e02 = p0->pseudoPosition - p2->pseudoPosition;
-	//vec3<T> e03 = p0->pseudoPosition - p3->pseudoPosition;
-	//vec3<T> e12 = p1->pseudoPosition - p2->pseudoPosition;
-	//vec3<T> e13 = p1->pseudoPosition - p3->pseudoPosition;
-	//vec3<T> E = p3->pseudoPosition - p2->pseudoPosition;
+	/*vec3<T> e02 = p0->pseudoPosition - p2->pseudoPosition;
+	vec3<T> e03 = p0->pseudoPosition - p3->pseudoPosition;
+	vec3<T> e12 = p1->pseudoPosition - p2->pseudoPosition;
+	vec3<T> e13 = p1->pseudoPosition - p3->pseudoPosition;
+	vec3<T> E = p3->pseudoPosition - p2->pseudoPosition;*/
 	vec3<T> e02 = p0->position - p2->position;
 	vec3<T> e03 = p0->position - p3->position;
 	vec3<T> e12 = p1->position - p2->position;
@@ -169,33 +178,59 @@ void Lyra::AdjacentTrianglePatch<T>::ImplicitDampingBendingForce(T delta_t, Velo
 	bVec.setZero();
 	xVec.setZero();
 
-	mat<T, 12, 12> bendingMat;
+	mat<T, 12, 12> bendingMat = mat<T, 12, 12>::Zero();
 
 	CollectMassInvMat(massInvMat);
-	CollectDampingBendingMat(bendingMat,massInvMat,updateCat);
-	CollectAMat(AMat, bendingMat,delta_t);
+	CollectDampingBendingMat(bendingMat, massInvMat, updateCat);
+	//std::cout << bendingMat << "\n";
+	CollectAMat(AMat, bendingMat, delta_t);
 	CollectbVec(bVec, updateCat);
 	SolveLinearSystem(xVec, AMat, bVec);
 
 	if (updateCat == VelocityUpdate::MIDDLE_VELOCITY) {
+
+		p0->middleVelocity = xVec.block<3, 1>(0, 0);
+		p1->middleVelocity = xVec.block<3, 1>(3, 0);
+		p2->middleVelocity = xVec.block<3, 1>(6, 0);
+		p3->middleVelocity = xVec.block<3, 1>(9, 0);
+
+		/*p0->velocity = xVec.block<3, 1>(0, 0);
+		p1->velocity = xVec.block<3, 1>(3, 0);
+		p2->velocity = xVec.block<3, 1>(6, 0);
+		p3->velocity = xVec.block<3, 1>(9, 0);*/
 		//accumulation of delta v
-		p0->middleVelocity += (xVec.block<3, 1>(0, 0) - p0->velocity);
+		/*p0->middleVelocity += (xVec.block<3, 1>(0, 0) - p0->velocity);
 		p1->middleVelocity += (xVec.block<3, 1>(3, 0) - p1->velocity);
 		p2->middleVelocity += (xVec.block<3, 1>(6, 0) - p2->velocity);
-		p3->middleVelocity += (xVec.block<3, 1>(9, 0) - p3->velocity);
+		p3->middleVelocity += (xVec.block<3, 1>(9, 0) - p3->velocity);*/
 	}
 	else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY) {
-		p0->pseudoVelocity += (xVec.block<3, 1>(0, 0) - p0->middleVelocity);
-		p1->pseudoVelocity += (xVec.block<3, 1>(3, 0) - p1->middleVelocity);
-		p2->pseudoVelocity += (xVec.block<3, 1>(6, 0) - p2->middleVelocity);
-		p3->pseudoVelocity += (xVec.block<3, 1>(9, 0) - p3->middleVelocity);
+		p0->middleVelocity = xVec.block<3, 1>(0, 0);
+		p1->middleVelocity = xVec.block<3, 1>(3, 0);
+		p2->middleVelocity = xVec.block<3, 1>(6, 0);
+		p3->middleVelocity = xVec.block<3, 1>(9, 0);
+		/*	p0->pseudoVelocity += (xVec.block<3, 1>(0, 0) - p0->middleVelocity);
+			p1->pseudoVelocity += (xVec.block<3, 1>(3, 0) - p1->middleVelocity);
+			p2->pseudoVelocity += (xVec.block<3, 1>(6, 0) - p2->middleVelocity);
+			p3->pseudoVelocity += (xVec.block<3, 1>(9, 0) - p3->middleVelocity);*/
 	}
 }
 
 template<typename T>
 void Lyra::AdjacentTrianglePatch<T>::CollectMassInvMat(mat<T, 12, 12>& massMat)
 {
-	T x0Mass = p0->mass;
+	T x0MassInv = p0->massInv;
+	T x1MassInv = p1->massInv;
+	T x2MassInv = p2->massInv;
+	T x3MassInv = p3->massInv;
+
+	massInvMat(0, 0) = massInvMat(1, 1) = massInvMat(2, 2) = x0MassInv;
+	massInvMat(3, 3) = massInvMat(4, 4) = massInvMat(5, 5) = x1MassInv;
+	massInvMat(6, 6) = massInvMat(7, 7) = massInvMat(8, 8) = x2MassInv;
+	massInvMat(9, 9) = massInvMat(10, 10) = massInvMat(11, 11) = x3MassInv;
+
+	//std::cout << x0MassInv << " " << x1MassInv << " " << x2MassInv << " " << x3MassInv << "\n";
+	/*T x0Mass = p0->mass;
 	T x1Mass = p1->mass;
 	T x2Mass = p2->mass;
 	T x3Mass = p3->mass;
@@ -203,12 +238,13 @@ void Lyra::AdjacentTrianglePatch<T>::CollectMassInvMat(mat<T, 12, 12>& massMat)
 	massInvMat(0, 0) = massInvMat(1, 1) = massInvMat(2, 2) = T(1) / x0Mass;
 	massInvMat(3, 3) = massInvMat(4, 4) = massInvMat(5, 5) = T(1) / x1Mass;
 	massInvMat(6, 6) = massInvMat(7, 7) = massInvMat(8, 8) = T(1) / x2Mass;
-	massInvMat(9, 9) = massInvMat(10, 10) = massInvMat(11, 11) = T(1) / x3Mass;
+	massInvMat(9, 9) = massInvMat(10, 10) = massInvMat(11, 11) = T(1) / x3Mass;*/
 }
 
 template<typename T>
-void Lyra::AdjacentTrianglePatch<T>::CollectAMat(mat<T, 12, 12>& bendingMat,mat<T,12,12>& Amat, T delta_t)
+void Lyra::AdjacentTrianglePatch<T>::CollectAMat(mat<T, 12, 12>& Amat, mat<T, 12, 12>& bendingMat, T delta_t)
 {
+	//std::cout << bendingMat << "\n";
 	AMat = mat<T, 12, 12>::Identity() - 0.5 * delta_t * massInvMat * bendingMat;
 }
 
@@ -253,7 +289,10 @@ void Lyra::AdjacentTrianglePatch<T>::CollectDampingBendingMat(mat<T, 12, 12>& be
 	uT = u.transpose();
 
 	T dampingFactor = - dampingBendCoefficent * El;
+	//std::cout << dampingFactor << "\n";
 	bendingMat = dampingFactor * u * uT;
+	//std::cout << bendingMat << "\n";
+	//std::cout << u * uT << "\n";
 }
 
 template<typename T>
@@ -262,10 +301,14 @@ void Lyra::AdjacentTrianglePatch<T>::CollectbVec(vec<T, 12>& bVec, VelocityUpdat
 	vec3<T> x0Vel, x1Vel, x2Vel, x3Vel;
 
 	if (updateCat == VelocityUpdate::MIDDLE_VELOCITY) {
-		x0Vel = p0->velocity;
+		x0Vel = p0->middleVelocity;
+		x1Vel = p1->middleVelocity;
+		x2Vel = p2->middleVelocity;
+		x3Vel = p3->middleVelocity;
+		/*x0Vel = p0->velocity;
 		x1Vel = p1->velocity;
 		x2Vel = p2->velocity;
-		x3Vel = p3->velocity;
+		x3Vel = p3->velocity;*/
 	}
 	else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY) {
 		x0Vel = p0->middleVelocity;
@@ -283,7 +326,16 @@ void Lyra::AdjacentTrianglePatch<T>::CollectbVec(vec<T, 12>& bVec, VelocityUpdat
 template<typename T>
 void Lyra::AdjacentTrianglePatch<T>::SolveLinearSystem(vec<T, 12>& xVec, mat<T, 12, 12>& AMat, vec<T, 12>& bVec)
 {
+	//std::cout << AMat.eigenvalues() << "\n";
+	//std::cout << AMat << "\n";
+	//std::cout << mat<T, 12, 12>::Identity().eigenvalues() << "\n";
+	//mat<std::complex<T>, 12, 1> eigenValues = AMat.eigenvalues();
+	//for (int i = 0; i < 12; i++) {
+	//	if (!IsZero(eigenValues(i).real() - 1))
+	//		std::cout << eigenValues(i).real() << "\n";
+	//	//std::cout << eigenValues(i).real() << "\n";
+	//}
+	//std::cout << "\n";
 	xVec = AMat.bdcSvd(Eigen::ComputeFullU | Eigen::ComputeFullV).solve(bVec);
-
 	//std::cout << xVec << "\n\n";
 }

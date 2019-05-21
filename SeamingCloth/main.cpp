@@ -67,7 +67,7 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow *window = glfwCreateWindow(screenWidth, screenHeight, "Cloth Simulation", nullptr, nullptr);
+	GLFWwindow *window = glfwCreateWindow(screenWidth, screenHeight, "Cloth Simulation-Implicit", nullptr, nullptr);
 
 	if (window == nullptr) {
 		std::cerr << "creating windows failed\n";
@@ -98,7 +98,7 @@ int main()
 	glm::mat4 MVP(1);
 
 	modelMat = glm::translate(modelMat, glm::vec3(-0.f, -0.f, 0.f));
-	modelMat = glm::rotate(modelMat, Angle2Radian(-30), glm::vec3(0.f, 1.f, 0.f));
+	modelMat = glm::rotate(modelMat, Angle2Radian(0/*-30*/), glm::vec3(0.f, 1.f, 0.f));
 
 	Lyra::Shader<Type> sharedShader =  Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 
@@ -160,18 +160,19 @@ int main()
 	Lyra::SeamingInfo<Type> seamingInfo1;
 	Lyra::ClothParms<Type> clothParms;
 
-	std::vector<uint32> stickPoints0 = { /*3,205,213*//*3,205,28,92,217,2*//*134,235,208,209*/ };
+	std::vector<uint32> stickPoints0 = { 223,139,203,200/*244,268*/ };
 	std::vector<uint32> stickPoints1 = { /*4,5,6*/ };
 	//patch0 Parms
 	{
 		parms0.path = "./patch/";
 		//parms0.name = "UvObj_texture_front.obj";
-		//parms0.name = "square4.obj";
+		//parms0.name = "square.obj";
 		parms0.name = "test4.obj";
 		//parms0.name = "Square_Front.obj";
 		parms0.shader = Lyra::Shader<Type>(modelVertexShaderPath.c_str(), modelFragmentShaderPath.c_str());
 		//parms0.patchMode = Lyra::ClothPatchMode::LYRA_CLOTH_PATCH_SEAMING;
 		parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_PLANE;
+		//parms0.orientation = Lyra::ClothPatchOrientation::LYRA_PATCH_XY;
 		parms0.orientation = Lyra::ClothPatchOrientation::LYRA_PATCH_XZ;
 		//parms0.orientation = Lyra::ClothPatchOrientation::LYRA_PATCH_XY;
 		//parms0.initState = Lyra::ClothPatchInitState::LYRA_CLOTH_PATCH_NON_PLANE;
@@ -179,22 +180,36 @@ int main()
 		///scale小了会导致plane force变小，结果系统更稳定，需要确定一个合适的scale
 		///这个scale理论上是非线性的，现在用线性的替代，必然导致force计算出现问题[19-04-11]
 		parms0.scale = 150.f;
+		//parms0.density = /*0.1f;*/0.187f;
+		//parms0.stretchingFactor = /*5000.f;*/ 1 * 16.593832f;
+		//parms0.shearingFactor = /*500.f;*/1 * 36.860302f;
+		//parms0.bendingFactor = 1 * 23.191698e-6f;
+		/////range of damping factor????(19-05-05)
+		//parms0.dampingStretchFactor = 1 * 0.001f;
+		//parms0.dampingShearFactor = 1 * 0.001f;
+		//parms0.dampingBendingFactor = 0.0 * 23.191698e-6;
+		
 		parms0.density = 0.228f;
-		///刚性强会使solver崩掉，刚性不够则没法缝合，
-		///@(todo_1)为什么刚性弱无法缝合？？？
-		///@(do_1)问题解决，可以缝合，积分方法问题
-		parms0.stretchingFactor = 151.503906f;
-		parms0.shearingFactor = 30.250183f;
-		parms0.bendingFactor = 0 * 117.070122e-6f;
+		///range for stretchFactor and shearFactor 100-5000
+		parms0.stretchingFactor = 5000.f;/*1 * 151.503906f;*/
+		parms0.shearingFactor = 5000.f;/*1 * 30.250183f;*/
+		parms0.bendingFactor = 0.4 * 10e-3f;/*1 * 117.070122e-6f;*/
 		///range of damping factor????(19-05-05)
-		parms0.dampingStretchFactor = 0.2f;
-		parms0.dampingShearFactor = 0.2f;
-		parms0.dampingBendingFactor = 0 * 117.070122e-7f;
+		///empirical
+		///if damping factor is enough large,three dimensions of velocity
+		///will be zeros.Attention, damping will not affect another dimension,
+		///e.g. damping in x,y, z will be not affect(approximate).
+		/*range of factor is from 1/1000 to 1/10000*/
+		parms0.dampingStretchFactor = 1 * 0.001f;
+		parms0.dampingShearFactor = 1 * 0.001f;
+		parms0.dampingBendingFactor = 0 * parms0.bendingFactor;
 		parms0.stretchScaleUDir = 1.f;
 		parms0.stretchScaleVDir = 1.f;
 
+		//std::cout << parms0.dampingBendingFactor << "\n";
+
 		//石头的摩擦力
-		parms0.frictionFactorForObject = 0.8f;
+		parms0.frictionFactorForObject = 0.0f;
 		parms0.dampingFactorForObject = 0.1f;
 
 		parms0.planeForceSwitch.enableStretchForce = true;
@@ -206,7 +221,7 @@ int main()
 		parms0.spaceForceSwitch.enableBendingForce = true;
 		parms0.spaceForceSwitch.enableDampingBendingForce = true;
 
-		parms0.enableCollisionDetect = true;
+		parms0.enableCollisionDetect = false;
 	}
 	//patch1 Parms
 	{
@@ -438,44 +453,8 @@ int main()
 	//cloth->AddPatch(clothPatch1);
 	cloth->AddSeamingInfo(seamingInfo1);
 	cloth->Integrate(clothParms);
-
-	/*Lyra::ClothBVH<Type> clothBvh;
-	clothBvh.Build(clothPatch0->TrianglePatches(), 1,
-		Lyra::ClothBvhCategory::CLOTH_BVH_PRE, bvhShader, true);
-
-	clothBvh.GlBind();*/
-
-	//Lyra::VertexPointer<Type> v0 = std::make_shared<Lyra::Vertex<Type>>();
-	//Lyra::VertexPointer<Type> v1 = std::make_shared<Lyra::Vertex<Type>>();
-	//Lyra::VertexPointer<Type> v2 = std::make_shared<Lyra::Vertex<Type>>();
-
-	////Lyra::randomDist<Type> dist(-10., 10.);
-	//Lyra::randomDist_i dist(0, 5);
-	//
-
-	//v0->position = glm::vec3(dist(Lyra::randomEngine), dist(Lyra::randomEngine), dist(Lyra::randomEngine));
-	//v1->position = glm::vec3(dist(Lyra::randomEngine), dist(Lyra::randomEngine), dist(Lyra::randomEngine));
-	//v2->position = glm::vec3(dist(Lyra::randomEngine), dist(Lyra::randomEngine), dist(Lyra::randomEngine));
-
-	//std::cout << v0->position.x<<" " << v0->position.y <<" "<< v0->position.z << "\n";
-	//std::cout << v1->position.x << " " << v1->position.y << " " << v1->position.z << "\n";
-	//std::cout << v2->position.x << " " << v2->position.y << " " << v2->position.z << "\n";
-	//Lyra::BBoxObjTriangle<Type> objTriangle(v0, v1, v2);
-	//Lyra::BBox<Type> bBox = objTriangle.GetBBox(bvhShader, true);
-
-	//std::cout << bBox.minCorner << "\n";
-	//std::cout << bBox.maxCorner << "\n";
-
-	//objTriangle.GlBind();
-
-	//bBox.GlBind();
-
 	cloth->GlBind();
-
 	body->GlBind(0.99);
-
-	//objBVH->GlBind();
-
 	camera.Init(setting, modelMat);
 
 	glEnable(GL_DEPTH_TEST);
@@ -505,7 +484,7 @@ int main()
 
 		bodyShader.use();
 		bodyShader.setMat4("MVP", MVP);
-		body->GlDrawModel(bodyShader, lineMode);
+		//body->GlDrawModel(bodyShader, lineMode);
 
 		//cloth->GlDrawBvh(camera);
 
@@ -515,7 +494,6 @@ int main()
 				sprintf_s(name, "obj_%08d.obj", meshCount);
 				cloth->SaveClothMesh(name, filePath);
 				meshCount++;
-
 			}
 		}
 

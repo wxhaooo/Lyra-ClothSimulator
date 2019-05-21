@@ -159,6 +159,7 @@ namespace Lyra
 		//Simulation
 		void AdvanceStep();
 		void UpdatePosition();
+		void UpdatePesudoVelocity();
 		void UpdateMiddleVelocity();
 		void UpdatePesudoPosition();
 		void UpdateMiddleVelocityWithVelcoityVerlet();
@@ -303,19 +304,15 @@ bool Lyra::Cloth<T>::Integrate(ClothParms<T> &parms)
 
 		//重新索引stickpoints
 		for (auto &stickPoint : *(stickPoints)) {
-
-			/*std::cout << stickPoint;*/
 			stickPoint += bias;
-			particles[stickPoint].movable = false;
-			//std::cout << " " << stickPoint << "\n";
+			/*std::cout << stickPoint;*/
+			//particles[stickPoint].movable = false;
 		}
 
 		//为了缝合点的重新索引
 		patch->SetBias(bias);
 		bias += count;
 	}
-
-	//std::cout<<particles.size();
 
 	//重新组织缝合信息
 	for (auto &info : seamingInfo) {
@@ -348,6 +345,18 @@ bool Lyra::Cloth<T>::Integrate(ClothParms<T> &parms)
 
 	//Output simulation information
 	SimulationInfo();
+
+	//Acquire other simulation information temporary
+	T minEdgeLength = 1000.;
+	for (auto& tri : patches[0]->TrianglePatches()) {
+		if (tri.MinEdgeLength() < minEdgeLength)
+			minEdgeLength = tri.MinEdgeLength();
+	}
+
+	T advistedDeltaT =  minEdgeLength * std::sqrt(patches[0]->Parms().density /
+		patches[0]->Parms().bendingFactor);
+
+	std::cout << advistedDeltaT << "\n";
 
 	//之后就可以进行模拟了
 	return true;
@@ -430,11 +439,10 @@ template<typename T>
 void Lyra::Cloth<T>::ApplyDampingForceImplicit(VelocityUpdate updateCat)
 {
 	for (auto& patch : patches) {
-		patch->ApplyDampingPlaneForceImplicit(parms.planeForceSwitch, parms.delta_t, updateCat);
-		//patch->ApplyDampingSpaceForceImplicit(parms.spaceForceSwitch, parms.delta_t, updateCat);
+		patch->ApplyDampingPlaneForceImplicit(parms.planeForceSwitch, parms.delta_t, updateCat, particles);
+		patch->ApplyDampingSpaceForceImplicit(parms.spaceForceSwitch, parms.delta_t, updateCat, particles);
 	}
-
-	UpdateDampingForceMiddleVelocity(updateCat);
+	//UpdateDampingForceMiddleVelocity(updateCat);
 }
 
 template<typename T>
@@ -801,6 +809,15 @@ void Lyra::Cloth<T>::UpdateMiddleVelocityWithVelcoityVerlet()
 }
 
 template<typename T>
+void Lyra::Cloth<T>::UpdatePesudoVelocity()
+{
+	for (auto& p : particles) {
+		if (p.movable)
+			p.UpdatePesudoVelocity(parms.delta_t);
+	}
+}
+
+template<typename T>
 void Lyra::Cloth<T>::UpdateMiddleVelocity()
 {
 	for (auto& p : particles) {
@@ -819,9 +836,12 @@ void Lyra::Cloth<T>::ImplicitPatchSimulate(Lyra::objectBvh_sp<T> objectBvh)
 	UpdatePesudoPositionImplicit();
 	ApplyExternalForce();
 	ApplyInternalForceExplicit();
-	UpdateMiddleVelocity();
-	ApplyDampingForceImplicit(VelocityUpdate::PSEUDO_VELOCITY);
+	UpdatePesudoVelocity();
 
+	/*For high damping material*/
+	/*UpdateMiddleVelocity();
+	ApplyDampingForceImplicit(VelocityUpdate::PSEUDO_VELOCITY);
+*/
 	//估计中间速度用于碰撞响应
 	EstimateMiddleVelocity();
 

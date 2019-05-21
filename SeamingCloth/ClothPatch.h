@@ -6,6 +6,10 @@
 #include"LyraFunction.h"
 #include"ClothBVH.h"
 #include"MeshExporter.h"
+#include"LyraMatrixFunc.h"
+
+#include <Spectra/GenEigsSolver.h>
+#include <Spectra/MatOp/SparseGenMatProd.h>
 
 #include<GraphicHelper\Model.h>
 #include<GraphicHelper\Camera.h>
@@ -14,6 +18,8 @@
 #include<memory>
 #include<iostream>
 #include<vector>
+
+using namespace Spectra;
 
 namespace Lyra
 {
@@ -83,9 +89,9 @@ namespace Lyra
 
 		void ApplySpaceForceExplicit(SpaceForceSwitch& spaceForceSwitch);
 
-		void ApplyDampingPlaneForceImplicit(PlaneForceSwitch& globalSwitch, T delta_t, VelocityUpdate updateCat);
+		void ApplyDampingPlaneForceImplicit(PlaneForceSwitch& globalSwitch, T delta_t, VelocityUpdate updateCat, std::vector<Particle<T>>& particles);
 
-		void ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t, VelocityUpdate updateCat);
+		void ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t, VelocityUpdate updateCat, std::vector<Particle<T>>& particles);
 
 		/*Collision Detection Functions*/
 		void CollisionDetectWithRigidbody(objectBvh_sp<T> objectBvh, CollisionResults_C2O<T>& collsionResult);
@@ -109,7 +115,15 @@ namespace Lyra
 		//生成三角形列表
 		void GenerateTrianglePatches(std::vector<Particle<T>> &particles, ClothPatchParms<T> &parms);
 		
+		void SetSparseMassInvMatrix(matSp<T>& massInvMatSp,std::vector<Particle<T>>& particles);
 
+		void SetSparseAMatrix(matSp<T>& AmatSp, T delta_t, VelocityUpdate updateCat,std::vector<Particle<T>>& particles);
+
+		void SetbVector(vecX<T>& bVec, VelocityUpdate updateCat, std::vector<Particle<T>>& particles);
+
+		void UpdateMiddleVlocity(std::vector<Particle<T>>& globalParticles, VelocityUpdate updateCat);
+
+		void UpdateVelocity(vecX<T>& xVec, VelocityUpdate updateCat, std::vector<Particle<T>>& particles);
 	private:
 		//首次先得到particle和triangleIndices，然后在cloth里面把index换成全局的，生成一次trianglePathes和adjTriangles
 		//在达到缝合条件后把triangleIndices沿缝合线重新组织一次，然后再生成新的trianglePathes和adjTriangles，后面模拟就没有问题了
@@ -153,6 +167,12 @@ namespace Lyra
 		uint32_sp acclerationVBO;
 
 		uint32_sp EBO;
+
+		matSp<T> AMatSp;
+		matSp<T> massInvMatSp;
+		matSp<T> IMatSp;
+		vecX<T> bVec;
+		vecX<T> xVec;
 	};
 
 	template<typename T>
@@ -185,6 +205,11 @@ void Lyra::ClothPatch<T>::LoadPatch(ClothPatchParms<T> &parms)
 
 	Init(parms);
 
+	/*uint32 i = 0;
+	for (auto& p : particles) {
+		std::cout <<i++ <<": "<< p.position(0) <<" "<< p.position(1)<<" "<<p.position(2) << "\n";
+	}*/
+
 	//if (parms.patchMode == ClothPatchMode::LYRA_CLOTH_PATCH_SINGLE) {
 	//	//如果是单个patch就按原来的方式初始化和渲染
 	//}
@@ -215,9 +240,6 @@ void Lyra::ClothPatch<T>::Init(ClothPatchParms<T> &parms)
 		//printf_s("%d %d %d\n", indices[i], indices[i + 1], indices[i + 2]);
 		triangleIndices.push_back(vec3<uint32>(indices[i], indices[i + 1], indices[i + 2]));
 	}
-
-	/*printf_s("\n\n");
-	system("pause");*/
 
 	//初始化顶点和渲染信息
 	for (int i = 0; i < vertices.size(); i++) {
@@ -260,6 +282,16 @@ void Lyra::ClothPatch<T>::Init(ClothPatchParms<T> &parms)
 
 	//按照密度来修改每个particle的质量
 	RevisedMass();
+
+	//根据可移动性再修改massInv
+	for (auto& stickPoint : *(parms.stickPoints)) {
+		//particles[stickPoint].movable = false;
+		particles[stickPoint].massInv = T(0);
+	}
+
+	/*for (auto& p : particles) {
+		std::cout << p.massInv << "\n";
+	}*/
 
 	numberOfParticle = vertices.size();
 }
@@ -305,9 +337,9 @@ void Lyra::ClothPatch<T>::RevisedMass()
 		triangleArea.push_back(area);
 	}
 
-	//std::cout << triangleArea.size() << "\n";
-	//std::cout << clothArea << "\n";
-	//system("pause");
+	/*std::cout << triangleArea.size() << "\n";
+	std::cout << clothArea << "\n";
+	system("pause");*/
 
 	int adjTriangleNum = 0;
 	std::vector<uint32> triangleIndexTmp;
@@ -332,13 +364,18 @@ void Lyra::ClothPatch<T>::RevisedMass()
 		//std::cout << totalMass << "\n";
 		//质量如果过小就把它设定为固定值
 		particles[i].mass = /*1.0;*/totalMass / 3.f;
+
 		//clothMass += particles[i].mass;
-
 		//std::cout << particles[i].mass << "\n";
-
-		if (Lyra::IsZero(particles[i].mass)) {
-			std::cerr << "particle's mass is Zero!\n";
+		if (!Lyra::IsZero(particles[i].mass)) {
+			particles[i].massInv = T(1) / particles[i].mass;
 		}
+		else {
+			std::cerr << "particle's mass is Zero!\n";
+			exit(0);
+		}
+		/*std::cout << particles[i].mass << "\n";
+		std::cout << particles[i].massInv << "\n";*/
 	}
 
 	//std::cout << clothMass << "\n";
@@ -348,10 +385,6 @@ void Lyra::ClothPatch<T>::RevisedMass()
 template<typename T>
 void Lyra::ClothPatch<T>::Create(std::vector<Particle<T>> &particles)
 {
-	//设置stickPoints
-	for (auto &stickPoint : *(parms.stickPoints)) {
-		particles[stickPoint].movable = false;
-	}
 	//三角形patch列表
 	GenerateTrianglePatches(particles,parms);
 	//邻接三角形patch列表
@@ -667,20 +700,160 @@ void Lyra::ClothPatch<T>::ApplyWind(vec3<T> &windVelocity,T density,T cod)
 }
 
 template<typename T>
-void Lyra::ClothPatch<T>::ApplyDampingPlaneForceImplicit(PlaneForceSwitch& globalSwitch, T delta_t, VelocityUpdate updateCat)
+void Lyra::ClothPatch<T>::SetSparseMassInvMatrix(matSp<T>& massInvMatSp,std::vector<Particle<T>>& particles)
 {
-	bool enableDampingStretch = parms.planeForceSwitch.enableDampingStretchForce & globalSwitch.enableDampingStretchForce;
-	bool enableDampingShear = parms.planeForceSwitch.enableDampingShearForce & globalSwitch.enableDampingShearForce;
+	massInvMatSp.resize(numberOfParticle * 3, numberOfParticle * 3);
+	massInvMatSp.setZero();
 
+	for (uint32 i = 0; i < numberOfParticle; i++) {
+		T massInv = (particles[mapping.get()[i]].massInv);
+		//std::cout << massInv << "\n";
+		massInvMatSp.insert(3 * i, 3 * i) = massInv;
+		massInvMatSp.insert(3 * i + 1, 3 * i + 1) = massInv;
+		massInvMatSp.insert(3 * i + 2, 3 * i + 2) = massInv;
+		/*T massInv = T(1) / (particles[mapping.get()[i]].mass);
+		massInvMatSp.insert(3 * i, 3 * i) = massInv;
+		massInvMatSp.insert(3 * i + 1, 3 * i + 1) = massInv;
+		massInvMatSp.insert(3 * i + 2, 3 * i + 2) = massInv;*/
+	}
+	//system("pause");
+	massInvMatSp.makeCompressed();
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::SetSparseAMatrix(matSp<T>& AMatSp,T delta_t, VelocityUpdate updateCat,std::vector<Particle<T>>& particles)
+{
+	AMatSp.resize(3 * numberOfParticle, 3 * numberOfParticle);
+	AMatSp.setZero();
+
+	mat<T, 3, 3> x0Mat, x1Mat, x2Mat;
+	uint32 x0Ind, x1Ind, x2Ind;
+
+	//三个点的位置以及对应的局部矩阵
 	for (auto& tri : trianglePatches) {
+		tri.ImplicitDampingPlaneForce(x0Mat, x1Mat, x2Mat, x0Ind, x1Ind, x2Ind, updateCat);
 
-		if (enableDampingStretch || enableDampingShear)
-			tri.ImplicitDampingPlaneForce(delta_t, enableDampingStretch, enableDampingShear,updateCat);
+		uint32 x0LocalInd = (x0Ind - bias) * 3;
+		uint32 x1LocalInd = (x1Ind - bias) * 3;
+		uint32 x2LocalInd = (x2Ind - bias) * 3;
+
+		InsertMat3x3IntoSparseMat(x0Mat, AMatSp, x0LocalInd, x0LocalInd);
+		InsertMat3x3IntoSparseMat(x1Mat, AMatSp, x1LocalInd, x1LocalInd);
+		InsertMat3x3IntoSparseMat(x2Mat, AMatSp, x2LocalInd, x2LocalInd);
+	}
+	
+	matSp<T> AMatSpTmp = AMatSp;
+
+	AMatSp = IMatSp - 0.5 * delta_t * massInvMatSp * AMatSpTmp;
+
+	AMatSp.makeCompressed();
+
+	//This sparse matrix's eigenvalues is less than 1,
+	//which causes velocity components decrease.[05-15-19]
+
+	//{
+	//	SparseGenMatProd<float> op(AMatSp);
+
+	//	// Construct eigen solver object, requesting the largest three eigenvalues
+	//	GenEigsSolver< float, LARGEST_MAGN, SparseGenMatProd<float> >
+	//		eigs(&op, AMatSp.rows() - 2, AMatSp.rows());
+	//	eigs.init();
+	//	int nconv = eigs.compute();
+
+	//	// Retrieve results
+	//	Eigen::VectorXcf evalues;
+	//	if (eigs.info() == SUCCESSFUL)
+	//		evalues = eigs.eigenvalues();
+
+	//	float maxEigenValue = -1, minEigenValue = 5000;
+
+	//	for (uint32 i = 0; i < evalues.rows(); i++) {
+	//		if (evalues(i).real() > maxEigenValue)
+	//			maxEigenValue = evalues(i).real();
+	//		if (evalues(i).real() < minEigenValue)
+	//			minEigenValue = evalues(i).real();
+	//	}
+
+	//	std::cout << "Max EigenValue: " << maxEigenValue << std::endl;
+	//	std::cout << "Min EigenValue: " << minEigenValue << std::endl;
+	//}
+	//std::cout << AMatSp << "\n";
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::SetbVector(vecX<T>& bVec, VelocityUpdate updateCat, std::vector<Particle<T>>& particles)
+{
+	bVec.resize(3 * numberOfParticle);
+	bVec.setZero();
+	vec3<T> vel;
+	for (uint32 i = 0; i < numberOfParticle; i++) {
+		if (updateCat == VelocityUpdate::MIDDLE_VELOCITY)
+			vel = particles[mapping.get()[i]].velocity;
+		else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY)
+			vel = particles[mapping.get()[i]].middleVelocity;
+
+		bVec.block<3, 1>(3 * i, 0) = vel;
+	}
+
+	/*std::cout << bVec << "\n";
+	system("pause");*/
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::UpdateVelocity(vecX<T>& xVec, VelocityUpdate updateCat, std::vector<Particle<T>>& globalParticles)
+{
+	/*std::cout << xVec << "\n";
+	system("pause");*/
+	for (uint32 i = 0; i < numberOfParticle; i++) {
+		if (updateCat == VelocityUpdate::MIDDLE_VELOCITY) {
+			vec3<T> vel = globalParticles[mapping.get()[i]].velocity;
+			vec3<T> tmp = /*globalParticles[mapping.get()[i]].velocity -*/ xVec.block<3, 1>(3 * i, 0);
+
+			//std::cout << /*vel(0) << " " << vel(1) << " " <<*/ vel(2) << "\n";
+			//std::cout << /*tmp(0) << " " << tmp(1) << " " <<*/ tmp(2) << "\n";
+			//std::cout <<"x:"<< vel(0) << " " << tmp(0) <<" "<<tmp(0) / vel(0) << "\n";
+			//std::cout <<"y:"<< vel(1) << " " << tmp(1) <<" "<<tmp(1) / vel(1) << "\n";
+			//std::cout << vel(1) << " " << tmp(1) <<" "<<tmp(1) / vel(1) << "\n";
+			//std::cout << tmp.norm() / vel.norm() << " " << tmp(0) / vel(0) << " " << tmp(1) / vel(1) << " " << tmp(2) / vel(2) << "\n";
+			/*std::cout << (globalParticles[mapping.get()[i]].velocity.norm() - xVec.block<3, 1>(3 * i, 0).norm())
+				/ globalParticles[mapping.get()[i]].velocity.norm() << "\n";*/
+			globalParticles[mapping.get()[i]].middleVelocity = xVec.block<3, 1>(3 * i, 0);
+		}
+		else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY) {
+			globalParticles[mapping.get()[i]].pseudoVelocity = xVec.block<3, 1>(3 * i, 0);
+		}
+	}
+
+	//system("pause");
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::ApplyDampingPlaneForceImplicit(PlaneForceSwitch& globalSwitch, T delta_t, VelocityUpdate updateCat,std::vector<Particle<T>>& globalParticles)
+{
+	xVec.setZero();
+	SetSparseIdentityMatrix(IMatSp, numberOfParticle * 3, numberOfParticle * 3);
+	SetSparseMassInvMatrix(massInvMatSp, globalParticles);
+	SetSparseAMatrix(AMatSp, delta_t, updateCat, globalParticles);
+	SetbVector(bVec,updateCat, globalParticles);
+	SolveSparseLinearSystem(xVec, AMatSp, bVec, SparseSolverCategory::SOLVER_QR);
+	UpdateVelocity(xVec, updateCat, globalParticles);
+}
+
+template<typename T>
+void Lyra::ClothPatch<T>::UpdateMiddleVlocity(std::vector<Particle<T>>& globalParticles, VelocityUpdate updateCat)
+{
+	if (!IsZeroHp(parms.dampingBendingFactor)) {
+		for (auto& p : globalParticles) {
+			if (updateCat == VelocityUpdate::MIDDLE_VELOCITY)
+				p.middleVelocity = p.velocity;
+			else if (updateCat == VelocityUpdate::PSEUDO_VELOCITY)
+				p.pseudoVelocity = p.velocity;
+		}
 	}
 }
 
 template<typename T>
-void Lyra::ClothPatch<T>::ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t, VelocityUpdate updateCat)
+void Lyra::ClothPatch<T>::ApplyDampingSpaceForceImplicit(SpaceForceSwitch& spaceForceSwitch, T delta_t, VelocityUpdate updateCat, std::vector<Particle<T>>& globalParticles)
 {
 	bool enableDampingBendingForce = parms.spaceForceSwitch.enableDampingBendingForce & spaceForceSwitch.enableDampingBendingForce;
 
@@ -688,6 +861,7 @@ void Lyra::ClothPatch<T>::ApplyDampingSpaceForceImplicit(SpaceForceSwitch& space
 		if (enableDampingBendingForce)
 			adjTri.ImplicitDampingBendingForce(delta_t, updateCat);
 	}
+	//UpdateMiddleVlocity(globalParticles,updateCat);
 }
 
 template<typename T>

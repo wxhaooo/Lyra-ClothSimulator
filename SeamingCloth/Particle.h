@@ -1,6 +1,7 @@
 #pragma once
 
 #include"Common.h"
+#include"LyraFunction.h"
 #include<memory>
 
 namespace Lyra
@@ -20,6 +21,7 @@ namespace Lyra
 	struct Particle
 	{
 		T mass;
+		T massInv;
 		bool movable;
 		bool isCollide;
 
@@ -69,6 +71,8 @@ namespace Lyra
 
 		void UpdatePseudoVelocityWithVelocityVerlet(T delta_t);
 
+		void UpdatePesudoVelocity(T delta_t);
+
 		void UpdateMiddleVelocity(T delta_t);
 
 		void UpdatePesudoPositionImplicit(T delta_t);
@@ -117,7 +121,6 @@ Lyra::Particle<T>::Particle(vec2<T> &planeCoord, vec3<T> &worldPos, T mass, bool
 	movable = mv;
 	isCollide = false;
 
-	//collisionInfo.isCollided = false;
 	this->mass = mass;
 }
 
@@ -126,6 +129,10 @@ void Lyra::Particle<T>::AdvanceStep()
 {
 	//不管有没有碰撞响应，下一时刻的信息都在前面更新到pseudoXXX里面
 	//这里只需要把pseudoXXX更新到XXX就可以了
+
+	/*std::cout << preVelocity(1) << "\n";
+	std::cout << velocity(1) << "\n\n";*/
+
 	prePosition = position;
 	position = pseudoPosition;
 	pseudoPosition.setZero();
@@ -147,14 +154,16 @@ void Lyra::Particle<T>::AdvanceStep()
 template<typename T>
 void Lyra::Particle<T>::ApplyGravity(vec3<T> acc)
 {
-	acceleration += acc;
+	if (!IsZero(massInv)) {
+		acceleration += acc;
+	}
 	//pseudoAccleration += acc;
 }
 
 template<typename T>
 void Lyra::Particle<T>::ApplyForce(vec3<T> force)
 {
-	acceleration += (force / mass);
+	acceleration += (massInv * force);
 	//pseudoAccleration += force / mass;
 }
 
@@ -186,6 +195,12 @@ template<typename T>
 void Lyra::Particle<T>::EstimateMiddleVelocity(T delta_t)
 {
 	middleVelocity = T(1) / delta_t * (pseudoPosition - position);
+}
+
+template<typename T>
+void Lyra::Particle<T>::UpdatePesudoVelocity(T delta_t) {
+	//std::cout << (0.5 * delta_t * acceleration).norm() << "\n";
+	pseudoVelocity = middleVelocity + 0.5 * delta_t * acceleration;
 }
 
 template<typename T>

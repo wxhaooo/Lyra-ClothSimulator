@@ -2,7 +2,7 @@
 
 #include<cmath>
 
-constexpr float delta_t = 0.001f;
+constexpr float delta_t = 0.0003f;
 
 float FPS = 60.f;
 
@@ -14,10 +14,10 @@ float elapsedTime = 0.0f;
 
 int savedPerFrames = static_cast<int>(ceil(SPF / delta_t));
 
-bool saveMesh = false;
+bool saveMesh = true;
 bool saveImage = false;
 
-bool hasWind = false;
+bool hasWind = true;
 bool lineMode = false;
 bool drawNormal = false;
 bool collisionDetect = true;

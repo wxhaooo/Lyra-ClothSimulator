@@ -110,6 +110,13 @@ namespace Lyra
 	}
 
 	template<typename T>
+	bool IsZeroHp(T v)
+	{
+		if (std::abs(v) < 10e-12) return true;
+		return false;
+	}
+
+	template<typename T>
 	T SafeACos(T radian)
 	{
 		if (typeid(T) == typeid(float)) {
